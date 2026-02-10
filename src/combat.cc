@@ -46,6 +46,10 @@
 #include "trait.h"
 #include "window_manager.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define CALLED_SHOT_WINDOW_Y (20)
@@ -5595,6 +5599,13 @@ static int calledShotSelectHitLocation(Object* critter, int* hitLocation, int hi
     _gmouse_disable(0);
     gameMouseSetCursor(MOUSE_CURSOR_ARROW);
 
+#ifdef __3DS__
+    setPreviousRectMap(0);
+    setRectMapPos(DISPLAY_DYNAMIC, calledShotWindowX, calledShotWindowY,
+            CALLED_SHOT_WINDOW_WIDTH, CALLED_SHOT_WINDOW_HEIGHT, false);
+    setActiveRectMap(DISPLAY_DYNAMIC);
+#endif
+
     int eventCode;
     while (true) {
         sharedFpsLimiter.mark();
@@ -5616,6 +5627,10 @@ static int calledShotSelectHitLocation(Object* critter, int* hitLocation, int hi
         renderPresent();
         sharedFpsLimiter.throttle();
     }
+
+#ifdef __3DS__
+    setActiveRectMap(getPreviousRectMap(0));
+#endif
 
     _gmouse_enable();
 

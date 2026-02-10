@@ -70,10 +70,17 @@ bool sfallConfigInit(int argc, char** argv)
     char path[COMPAT_MAX_PATH];
     char* executable = argv[0];
     char* ch = strrchr(executable, '\\');
+#ifndef _WIN32
+    char* fch = strrchr(executable, '/');
+    if (fch != nullptr && (ch == nullptr || fch > ch)) {
+        ch = fch;
+    }
+#endif
     if (ch != nullptr) {
+        char saved = *ch;
         *ch = '\0';
-        snprintf(path, sizeof(path), "%s\\%s", executable, SFALL_CONFIG_FILE_NAME);
-        *ch = '\\';
+        snprintf(path, sizeof(path), "%s%c%s", executable, saved, SFALL_CONFIG_FILE_NAME);
+        *ch = saved;
     } else {
         strcpy(path, SFALL_CONFIG_FILE_NAME);
     }

@@ -14,6 +14,10 @@
 #include "settings.h"
 #include "sfall_config.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_sys.h"
+#endif
+
 namespace fallout {
 
 typedef struct ArtListDescription {
@@ -135,6 +139,9 @@ int artInit()
     char string[200];
 
     int cacheSize = settings.system.art_cache_size;
+#ifdef __3DS__
+    cacheSize = ((heapAvailableAtStart / (1024.0f * 1024.0f)) - 16);
+#endif
     if (!cacheInit(&gArtCache, artCacheGetFileSizeImpl, artCacheReadDataImpl, artCacheFreeImpl, cacheSize << 20)) {
         debugPrint("cache_init failed in art_init\n");
         return -1;

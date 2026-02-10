@@ -47,6 +47,12 @@
 #include "word_wrap.h"
 #include "worldmap.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_gfx.h"
+#include "platform/ctr/ctr_input.h"
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define RENDER_ALL_STATS 7
@@ -820,6 +826,12 @@ int characterEditorShow(bool isCreationMode)
     }
 
     int rc = -1;
+
+#ifdef __3DS__
+    setPreviousRectMap(0);
+    setActiveRectMap(DISPLAY_CHAR);
+#endif
+
     while (rc == -1) {
         sharedFpsLimiter.mark();
 
@@ -1176,6 +1188,11 @@ int characterEditorShow(bool isCreationMode)
         renderPresent();
         sharedFpsLimiter.throttle();
     }
+
+#ifdef __3DS__
+    setActiveRectMap(getPreviousRectMap(0));
+    offsetY_char = 0;
+#endif
 
     if (rc == 0) {
         if (isCreationMode) {
@@ -1932,7 +1949,13 @@ static int _get_input_str(int win, int cancelKeyCode, char* text, int maxLength,
     fontDrawText(windowBuffer + windowWidth * y + x, copy, windowWidth, windowWidth, textColor);
 
     windowRefresh(win);
-
+#ifdef __3DS__
+    ctr_input_swkbd("Enter your name", text, text);
+    bufferFill(windowBuffer + windowWidth * y + x, nameWidth, fontGetLineHeight(), windowWidth, backgroundColor);
+    fontDrawText(windowBuffer + windowWidth * y + x, copy, windowWidth, windowWidth, textColor);
+    renderPresent();
+    int rc = 0;
+#else
     beginTextInput();
 
     int blinkingCounter = 3;
@@ -1999,6 +2022,7 @@ static int _get_input_str(int win, int cancelKeyCode, char* text, int maxLength,
     }
 
     endTextInput();
+#endif
 
     if (rc == 0 || nameLength > 0) {
         copy[nameLength] = '\0';
@@ -3417,7 +3441,9 @@ static int characterEditorEditAge()
     if (prevBtn != -1) {
         buttonSetCallbacks(prevBtn, _gsound_med_butt_press, nullptr);
     }
-
+#ifdef __3DS__
+    isAgeWindow = true;
+#endif
     while (true) {
         sharedFpsLimiter.mark();
 
@@ -3434,6 +3460,9 @@ static int characterEditorEditAge()
             }
 
             windowDestroy(win);
+#ifdef __3DS__
+            isAgeWindow = false;
+#endif
             return 0;
         } else if (keyCode == KEY_ESCAPE || _game_user_wants_to_quit != 0) {
             break;
@@ -3551,7 +3580,9 @@ static int characterEditorEditAge()
         renderPresent();
         sharedFpsLimiter.throttle();
     }
-
+#ifdef __3DS__
+    isAgeWindow = false;
+#endif
     critterSetBaseStat(gDude, STAT_AGE, savedAge);
     characterEditorDrawAge();
     characterEditorDrawPrimaryStat(RENDER_ALL_STATS, 0, 0);
@@ -3573,6 +3604,9 @@ static void characterEditorEditGender()
     int genderWindowX = (screenGetWidth() - EDITOR_WINDOW_WIDTH) / 2 + 9
         + _editorFrmImages[EDITOR_GRAPHIC_NAME_ON].getWidth()
         + _editorFrmImages[EDITOR_GRAPHIC_AGE_ON].getWidth();
+#ifdef __3DS__
+    genderWindowX -= 40;
+#endif
     int genderWindowY = (screenGetHeight() - EDITOR_WINDOW_HEIGHT) / 2;
     int win = windowCreate(genderWindowX, genderWindowY, windowWidth, windowHeight, 256, WINDOW_MODAL | WINDOW_DONT_MOVE_TOP);
 
@@ -3652,7 +3686,9 @@ static void characterEditorEditGender()
 
     int savedGender = critterGetStat(gDude, STAT_GENDER);
     _win_set_button_rest_state(btns[savedGender], 1, 0);
-
+#ifdef __3DS__
+    isSexWindow = true;
+#endif
     while (true) {
         sharedFpsLimiter.mark();
 
@@ -3700,7 +3736,9 @@ static void characterEditorEditGender()
         renderPresent();
         sharedFpsLimiter.throttle();
     }
-
+#ifdef __3DS__
+    isSexWindow = false;
+#endif
     characterEditorDrawGender();
     windowDestroy(win);
 }
@@ -5928,6 +5966,11 @@ static int perkDialogShow()
     perkDialogDrawCard(perkFrmId, perkName, perkRank, perkDescription);
     windowRefresh(gPerkDialogWindow);
 
+#ifdef __3DS__
+    setPreviousRectMap(1);
+    setActiveRectMap(DISPLAY_CHAR_PERK);
+#endif
+
     int rc = perkDialogHandleInput(count, perkDialogRefreshPerks);
 
     if (rc == 1) {
@@ -5965,6 +6008,10 @@ static int perkDialogShow()
     characterEditorDrawFolders();
     characterEditorDrawCard();
     windowRefresh(gCharacterEditorWindow);
+
+#ifdef __3DS__
+    setActiveRectMap(getPreviousRectMap(1));
+#endif
 
     _perkDialogBackgroundFrmImage.unlock();
 

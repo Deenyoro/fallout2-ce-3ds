@@ -42,6 +42,10 @@
 #include "word_wrap.h"
 #include "worldmap.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define PIPBOY_WINDOW_WIDTH (640)
@@ -419,6 +423,11 @@ int pipboyOpen(int intent)
     mouseGetPositionInWindow(gPipboyWindow, &gPipboyPreviousMouseX, &gPipboyPreviousMouseY);
     gPipboyLastEventTimestamp = getTicks();
 
+#ifdef __3DS__
+    setPreviousRectMap(0);
+    setActiveRectMap(DISPLAY_PIPBOY);
+#endif
+
     while (true) {
         sharedFpsLimiter.mark();
 
@@ -480,6 +489,10 @@ int pipboyOpen(int intent)
         renderPresent();
         sharedFpsLimiter.throttle();
     }
+
+#ifdef __3DS__
+    setActiveRectMap(getPreviousRectMap(0));
+#endif
 
     pipboyWindowFree();
 
