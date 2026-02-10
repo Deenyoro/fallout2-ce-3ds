@@ -8,6 +8,11 @@
 #include "main.h"
 #include "platform_compat.h"
 
+#ifdef __3DS__
+#include <3ds.h>
+#include "debug.h"
+#endif
+
 namespace fallout {
 
 static void gameConfigResolvePath(const char* section, const char* key);
@@ -80,7 +85,11 @@ bool gameConfigInit(bool isMapper, int argc, char** argv)
     configSetInt(&gGameConfig, GAME_CONFIG_PREFERENCES_KEY, GAME_CONFIG_COMBAT_TAUNTS_KEY, 1);
     configSetInt(&gGameConfig, GAME_CONFIG_PREFERENCES_KEY, GAME_CONFIG_LANGUAGE_FILTER_KEY, 0);
     configSetInt(&gGameConfig, GAME_CONFIG_PREFERENCES_KEY, GAME_CONFIG_RUNNING_KEY, 0);
+#ifdef __3DS__
+    configSetInt(&gGameConfig, GAME_CONFIG_PREFERENCES_KEY, GAME_CONFIG_SUBTITLES_KEY, 1);
+#else
     configSetInt(&gGameConfig, GAME_CONFIG_PREFERENCES_KEY, GAME_CONFIG_SUBTITLES_KEY, 0);
+#endif
     configSetInt(&gGameConfig, GAME_CONFIG_PREFERENCES_KEY, GAME_CONFIG_COMBAT_SPEED_KEY, 0);
     configSetInt(&gGameConfig, GAME_CONFIG_PREFERENCES_KEY, GAME_CONFIG_PLAYER_SPEED_KEY, 0);
     configSetDouble(&gGameConfig, GAME_CONFIG_PREFERENCES_KEY, GAME_CONFIG_TEXT_BASE_DELAY_KEY, 3.5);
@@ -95,13 +104,25 @@ bool gameConfigInit(bool isMapper, int argc, char** argv)
     configSetInt(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_SOUNDS_KEY, 1);
     configSetInt(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_MUSIC_KEY, 1);
     configSetInt(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_SPEECH_KEY, 1);
+#ifdef __3DS__
+    configSetInt(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_MASTER_VOLUME_KEY, 32767);
+    configSetInt(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_MUSIC_VOLUME_KEY, 32767);
+    configSetInt(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_SNDFX_VOLUME_KEY, 32767);
+    configSetInt(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_SPEECH_VOLUME_KEY, 32767);
+#else
     configSetInt(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_MASTER_VOLUME_KEY, 22281);
     configSetInt(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_MUSIC_VOLUME_KEY, 22281);
     configSetInt(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_SNDFX_VOLUME_KEY, 22281);
     configSetInt(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_SPEECH_VOLUME_KEY, 22281);
+#endif
     configSetInt(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_CACHE_SIZE_KEY, 448);
+#ifdef __3DS__
+    configSetString(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_MUSIC_PATH1_KEY, "data\\sound\\music\\");
+    configSetString(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_MUSIC_PATH2_KEY, "data\\sound\\music\\");
+#else
     configSetString(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_MUSIC_PATH1_KEY, "sound\\music\\");
     configSetString(&gGameConfig, GAME_CONFIG_SOUND_KEY, GAME_CONFIG_MUSIC_PATH2_KEY, "sound\\music\\");
+#endif
     configSetString(&gGameConfig, GAME_CONFIG_DEBUG_KEY, GAME_CONFIG_MODE_KEY, "environment");
     configSetInt(&gGameConfig, GAME_CONFIG_DEBUG_KEY, GAME_CONFIG_SHOW_TILE_NUM_KEY, 0);
     configSetInt(&gGameConfig, GAME_CONFIG_DEBUG_KEY, GAME_CONFIG_SHOW_SCRIPT_MESSAGES_KEY, 0);
@@ -148,6 +169,17 @@ bool gameConfigInit(bool isMapper, int argc, char** argv)
         ? customConfigFileName
         : DEFAULT_GAME_CONFIG_FILE_NAME;
 
+#ifdef __3DS__
+    strcpy(gGameConfigFilePath, "sdmc:/3ds/fallout2/fallout2.cfg");
+    FILE *file = fopen(gGameConfigFilePath, "r");
+
+    if (file) {
+        fclose(file);
+        configRead(&gGameConfig, gGameConfigFilePath, false);
+    } else {
+        configWrite(&gGameConfig, gGameConfigFilePath, false);
+    }
+#else
     // Make `fallout2.cfg` file path.
     char* executable = argv[0];
     char* ch = strrchr(executable, '\\');
@@ -178,6 +210,7 @@ bool gameConfigInit(bool isMapper, int argc, char** argv)
     // Read contents of `fallout2.cfg` into config. The values from the file
     // will override the defaults above.
     configRead(&gGameConfig, gGameConfigFilePath, false);
+#endif
 
     // Add key-values from command line, which overrides both defaults and
     // whatever was loaded from `fallout2.cfg`.
@@ -202,6 +235,9 @@ bool gameConfigInit(bool isMapper, int argc, char** argv)
 // 0x444C14
 bool gameConfigSave()
 {
+#ifdef __3DS__
+    debugPrint("gameConfigSave()\n");
+#endif
     if (!gGameConfigInitialized) {
         return false;
     }

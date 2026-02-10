@@ -41,6 +41,10 @@
 #include "word_wrap.h"
 #include "worldmap.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define DEATH_WINDOW_WIDTH 640
@@ -93,6 +97,10 @@ int falloutMain(int argc, char** argv)
     if (mainMenuWindowInit() == 0) {
         bool done = false;
         while (!done) {
+#ifdef __3DS__
+            if (ctr_rectMap.active != DISPLAY_MAIN)
+                setActiveRectMap(DISPLAY_MAIN);
+#endif
             keyboardReset();
             _gsound_background_play_level_music("07desert", 11);
             mainMenuWindowUnhide(1);
@@ -110,6 +118,9 @@ int falloutMain(int argc, char** argv)
             case MAIN_MENU_NEW_GAME:
                 mainMenuWindowHide(true);
                 mainMenuWindowFree();
+#ifdef __3DS__
+                setActiveRectMap(DISPLAY_CHAR_SELECT);
+#endif
                 if (characterSelectorOpen() == 2) {
                     gameMoviePlay(MOVIE_ELDER, GAME_MOVIE_STOP_MUSIC);
                     randomSeedPrerandom(-1);
@@ -152,6 +163,9 @@ int falloutMain(int argc, char** argv)
                     int win = windowCreate(0, 0, screenGetWidth(), screenGetHeight(), _colorTable[0], WINDOW_MODAL | WINDOW_MOVE_ON_TOP);
                     mainMenuWindowHide(true);
                     mainMenuWindowFree();
+#ifdef __3DS__
+                    setActiveRectMap(DISPLAY_FULL);
+#endif
 
                     // NOTE: Uninline.
                     main_loadgame_new();
@@ -164,6 +178,9 @@ int falloutMain(int argc, char** argv)
                     } else if (loadGameRc != 0) {
                         windowDestroy(win);
                         win = -1;
+#ifdef __3DS__
+                        setActiveRectMap(DISPLAY_GUI);
+#endif
                         mainLoop();
                     }
                     paletteFadeTo(gPaletteWhite);
@@ -268,6 +285,9 @@ static int _main_load_new(char* mapFileName)
 
     int win = windowCreate(0, 0, screenGetWidth(), screenGetHeight(), _colorTable[0], WINDOW_MODAL | WINDOW_MOVE_ON_TOP);
     windowRefresh(win);
+#ifdef __3DS__
+    setActiveRectMap(DISPLAY_GUI);
+#endif
 
     colorPaletteLoad("color.pal");
     paletteFadeTo(_cmap);
@@ -361,6 +381,10 @@ static void mainLoop()
 // 0x48118C
 static void showDeath()
 {
+#ifdef __3DS__
+    setActiveRectMap(DISPLAY_DEAD);
+#endif
+
     artCacheFlush();
     colorCycleDisable();
     gameMouseSetCursor(MOUSE_CURSOR_NONE);

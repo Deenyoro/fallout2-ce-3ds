@@ -46,6 +46,10 @@
 #include "tile.h"
 #include "window_manager.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define INVENTORY_WINDOW_X 80
@@ -1518,6 +1522,28 @@ static bool _setup_inventory(int inventoryWindowType)
 
     _gmouse_disable(0);
 
+#ifdef __3DS__
+    setPreviousRectMap(1);
+
+    switch (inventoryWindowType) {
+        case INVENTORY_WINDOW_TYPE_NORMAL:
+            setActiveRectMap(DISPLAY_INVENTORY);
+            break;
+        case INVENTORY_WINDOW_TYPE_USE_ITEM_ON:
+            setActiveRectMap(DISPLAY_INVENTORY_USE);
+            break;
+        case INVENTORY_WINDOW_TYPE_LOOT:
+            setActiveRectMap(DISPLAY_INVENTORY_LOOT);
+            break;
+        case INVENTORY_WINDOW_TYPE_TRADE:
+            setActiveRectMap(DISPLAY_INVENTORY_TRADE);
+            break;
+        default:
+            setActiveRectMap(DISPLAY_INVENTORY);
+            break;
+    }
+#endif
+
     return isoWasEnabled;
 }
 
@@ -2188,6 +2214,10 @@ static void inventoryCommonFree()
     inventoryMessageListFree();
 
     _inven_is_initialized = 0;
+
+#ifdef __3DS__
+    setActiveRectMap(getPreviousRectMap(1));
+#endif
 }
 
 // 0x470BCC
@@ -2219,7 +2249,11 @@ static void inventoryItemSlotOnMouseEnter(int btn, int keyCode)
             int v6 = 0;
             _gmouse_3d_pick_frame_hot(&v5, &v6);
 
+#ifdef __3DS__
+            InventoryCursorData* cursorData = &(gInventoryCursorData[INVENTORY_WINDOW_CURSOR_ARROW]);
+#else
             InventoryCursorData* cursorData = &(gInventoryCursorData[INVENTORY_WINDOW_CURSOR_PICK]);
+#endif
             mouseSetFrame(cursorData->frmData, cursorData->width, cursorData->height, cursorData->width, v5, v6, 0);
 
             if (item != _last_target) {
@@ -5609,6 +5643,9 @@ static int inventoryQuantitySelect(int inventoryWindowType, Object* item, int ma
         int keyCode = inputGetInput();
         if (keyCode == KEY_ESCAPE) {
             inventoryQuantityWindowFree(inventoryWindowType);
+#ifdef __3DS__
+            setActiveRectMap(getPreviousRectMap(2));
+#endif
             return -1;
         }
 
@@ -5732,6 +5769,9 @@ static int inventoryQuantitySelect(int inventoryWindowType, Object* item, int ma
         sharedFpsLimiter.throttle();
     }
 
+#ifdef __3DS__
+    setActiveRectMap(getPreviousRectMap(2));
+#endif
     inventoryQuantityWindowFree(inventoryWindowType);
 
     return value;
@@ -5756,6 +5796,13 @@ static int inventoryQuantityWindowInit(int inventoryWindowType, Object* item)
         : windowDescription->y;
     _mt_wid = windowCreate(quantityWindowX, quantityWindowY, windowDescription->width, windowDescription->height, 257, WINDOW_MODAL | WINDOW_MOVE_ON_TOP);
     unsigned char* windowBuffer = windowGetBuffer(_mt_wid);
+
+#ifdef __3DS__
+    setRectMapPos(DISPLAY_DYNAMIC, quantityWindowX, quantityWindowY,
+            windowDescription->width, windowDescription->height, false);
+    setPreviousRectMap(2);
+    setActiveRectMap(DISPLAY_DYNAMIC);
+#endif
 
     FrmImage backgroundFrmImage;
     int backgroundFid = buildFid(OBJ_TYPE_INTERFACE, windowDescription->frmId, 0, 0, 0);

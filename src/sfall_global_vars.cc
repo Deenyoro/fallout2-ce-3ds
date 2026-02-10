@@ -99,7 +99,8 @@ bool sfall_gl_vars_store(const char* key, int value)
         return false;
     }
 
-    uint64_t numericKey = *(reinterpret_cast<const uint64_t*>(key));
+    uint64_t numericKey;
+    memcpy(&numericKey, key, sizeof(numericKey));
     return sfall_gl_vars_store(numericKey, value);
 }
 
@@ -114,7 +115,8 @@ bool sfall_gl_vars_fetch(const char* key, int& value)
         return false;
     }
 
-    uint64_t numericKey = *(reinterpret_cast<const uint64_t*>(key));
+    uint64_t numericKey;
+    memcpy(&numericKey, key, sizeof(numericKey));
     return sfall_gl_vars_fetch(numericKey, value);
 }
 

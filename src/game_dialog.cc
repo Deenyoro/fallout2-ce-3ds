@@ -42,6 +42,10 @@
 #include "tile.h"
 #include "window_manager.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define DIALOG_REVIEW_ENTRIES_CAPACITY 80
@@ -56,9 +60,17 @@ namespace fallout {
 #define GAME_DIALOG_REPLY_WINDOW_WIDTH 379
 #define GAME_DIALOG_REPLY_WINDOW_HEIGHT 58
 
+#ifdef __3DS__
+#define GAME_DIALOG_OPTIONS_WINDOW_X (127 + 20)
+#else
 #define GAME_DIALOG_OPTIONS_WINDOW_X 127
+#endif
 #define GAME_DIALOG_OPTIONS_WINDOW_Y 335
+#ifdef __3DS__
+#define GAME_DIALOG_OPTIONS_WINDOW_WIDTH (393 - 20)
+#else
 #define GAME_DIALOG_OPTIONS_WINDOW_WIDTH 393
+#endif
 #define GAME_DIALOG_OPTIONS_WINDOW_HEIGHT 117
 
 #define GAME_DIALOG_REVIEW_WINDOW_WIDTH 640
@@ -933,6 +945,13 @@ int _gdialogInitFromScript(int headFid, int reaction)
 
     GameMode::enterGameMode(GameMode::kDialog);
 
+#ifdef __3DS__
+    if ((ctr_rectMap.main == DISPLAY_FIELD) || (ctr_rectMap.main == DISPLAY_GUI)) {
+        setPreviousRectMap(0);
+    }
+    setActiveRectMap(DISPLAY_DIALOG);
+#endif
+
     return 0;
 }
 
@@ -1020,6 +1039,10 @@ int _gdialogExitFromScript()
     }
 
     _gdDialogWentOff = true;
+
+#ifdef __3DS__
+    setActiveRectMap(getPreviousRectMap(0));
+#endif
 
     return 0;
 }
@@ -1501,6 +1524,10 @@ int gameDialogShowReview()
         sharedFpsLimiter.throttle();
     }
 
+#ifdef __3DS__
+    setActiveRectMap(DISPLAY_DIALOG);
+#endif
+
     if (gameDialogReviewWindowFree(&win) == -1) {
         return -1;
     }
@@ -1511,6 +1538,9 @@ int gameDialogShowReview()
 // NOTE: Uncollapsed 0x445CA0 with different signature.
 void gameDialogReviewButtonOnMouseUp(int btn, int keyCode)
 {
+#ifdef __3DS__
+    setActiveRectMap(DISPLAY_FULL);
+#endif
     gameDialogShowReview();
 }
 
@@ -2107,12 +2137,20 @@ void gameDialogOptionOnMouseEnter(int index)
 
     _optionRect.left = 0;
     _optionRect.top = dialogOptionEntry->top;
+#ifdef __3DS__
+    _optionRect.right = 340;
+#else
     _optionRect.right = 391;
+#endif
     _optionRect.bottom = dialogOptionEntry->bottom;
     _gDialogRefreshOptionsRect(gGameDialogOptionsWindow, &_optionRect);
 
     _optionRect.left = 5;
+#ifdef __3DS__
+    _optionRect.right = 340;
+#else
     _optionRect.right = 388;
+#endif
 
     int color = _colorTable[32747] | 0x2000000;
     if (perkHasRank(gDude, PERK_EMPATHY)) {
@@ -2142,7 +2180,11 @@ void gameDialogOptionOnMouseEnter(int index)
         color);
 
     _optionRect.left = 0;
+#ifdef __3DS__
+    _optionRect.right = 340;
+#else
     _optionRect.right = 391;
+#endif
     _optionRect.top = dialogOptionEntry->top;
     windowRefreshRect(gGameDialogOptionsWindow, &_optionRect);
 }
@@ -2154,7 +2196,11 @@ void gameDialogOptionOnMouseExit(int index)
 
     _optionRect.left = 0;
     _optionRect.top = dialogOptionEntry->top;
+#ifdef __3DS__
+    _optionRect.right = 340;
+#else
     _optionRect.right = 391;
+#endif
     _optionRect.bottom = dialogOptionEntry->bottom;
     _gDialogRefreshOptionsRect(gGameDialogOptionsWindow, &_optionRect);
 
@@ -2178,7 +2224,11 @@ void gameDialogOptionOnMouseExit(int index)
     }
 
     _optionRect.left = 5;
+#ifdef __3DS__
+    _optionRect.right = 340;
+#else
     _optionRect.right = 388;
+#endif
 
     // NOTE: Uninline.
     text_to_rect_wrapped(windowGetBuffer(gGameDialogOptionsWindow),
@@ -2189,7 +2239,11 @@ void gameDialogOptionOnMouseExit(int index)
         393,
         color);
 
+#ifdef __3DS__
+    _optionRect.right = 340;
+#else
     _optionRect.right = 391;
+#endif
     _optionRect.top = dialogOptionEntry->top;
     _optionRect.left = 0;
     windowRefreshRect(gGameDialogOptionsWindow, &_optionRect);
@@ -2229,7 +2283,11 @@ void _gdProcessUpdate()
 
     _optionRect.left = 5;
     _optionRect.top = 5;
+#ifdef __3DS__
+    _optionRect.right = 340;
+#else
     _optionRect.right = 388;
+#endif
     _optionRect.bottom = 112;
 
     _demo_copy_title(gGameDialogReplyWindow);
@@ -2810,6 +2868,9 @@ void gameDialogTicker()
         _loop_cnt = -1;
         _dialogue_switch_mode = 0;
         _gdialog_barter_destroy_win();
+#ifdef __3DS__
+        setActiveRectMap(DISPLAY_DIALOG);
+#endif
         _gdialog_window_create();
 
         // NOTE: Uninline.

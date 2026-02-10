@@ -32,6 +32,11 @@
 #include "tile.h"
 #include "window_manager.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_input.h"
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 typedef enum ScrollableDirections {
@@ -1209,6 +1214,10 @@ void _gmouse_handle_event(int mouseX, int mouseY, int mouseState)
                         if (1) {
                             int skill = -1;
 
+#ifdef __3DS__
+                            setPreviousRectMap(0);
+                            setActiveRectMap(DISPLAY_SKILLDEX);
+#endif
                             int rc = skilldexOpen();
                             switch (rc) {
                             case SKILLDEX_RC_SNEAK:
@@ -1236,6 +1245,9 @@ void _gmouse_handle_event(int mouseX, int mouseY, int mouseState)
                                 skill = SKILL_REPAIR;
                                 break;
                             }
+#ifdef __3DS__
+                            setActiveRectMap(getPreviousRectMap(0));
+#endif
 
                             if (skill != -1) {
                                 actionUseSkill(gDude, targetObj, skill);
@@ -1648,6 +1660,18 @@ Object* gameMouseGetObjectUnderCursor(int objectType, bool a2, int elevation)
 // 0x44CFA0
 int gameMouseRenderPrimaryAction(int x, int y, int menuItem, int width, int height)
 {
+#ifdef __3DS__
+    if (ctr_input.mode == DISPLAY_MODE_ADAPT) {
+        if (ctr_rectMap.active == DISPLAY_GUI || ctr_rectMap.active == DISPLAY_FIELD) {
+            width = rectMaps[DISPLAY_FIELD][0]->src_x + rectMaps[DISPLAY_FIELD][0]->src_w;
+            height = rectMaps[DISPLAY_FIELD][0]->src_y + rectMaps[DISPLAY_FIELD][0]->src_h;
+        } else {
+            width = rectMaps[ctr_rectMap.active][0]->src_x + rectMaps[ctr_rectMap.active][0]->src_w;
+            height = rectMaps[ctr_rectMap.active][0]->src_y + rectMaps[ctr_rectMap.active][0]->src_h;
+        }
+    }
+#endif
+
     CacheEntry* menuItemFrmHandle;
     int menuItemFid = buildFid(OBJ_TYPE_INTERFACE, gGameMouseActionMenuItemFrmIds[menuItem], 0, 0, 0);
     Art* menuItemFrm = artLock(menuItemFid, &menuItemFrmHandle);
@@ -1733,6 +1757,18 @@ int _gmouse_3d_pick_frame_hot(int* a1, int* a2)
 // 0x44D214
 int gameMouseRenderActionMenuItems(int x, int y, const int* menuItems, int menuItemsLength, int width, int height)
 {
+#ifdef __3DS__
+    if (ctr_input.mode == DISPLAY_MODE_ADAPT) {
+        if (ctr_rectMap.active == DISPLAY_GUI || ctr_rectMap.active == DISPLAY_FIELD) {
+            width = rectMaps[DISPLAY_FIELD][0]->src_x + rectMaps[DISPLAY_FIELD][0]->src_w;
+            height = rectMaps[DISPLAY_FIELD][0]->src_y + rectMaps[DISPLAY_FIELD][0]->src_h;
+        } else {
+            width = rectMaps[ctr_rectMap.active][0]->src_x + rectMaps[ctr_rectMap.active][0]->src_w;
+            height = rectMaps[ctr_rectMap.active][0]->src_y + rectMaps[ctr_rectMap.active][0]->src_h;
+        }
+    }
+#endif
+
     _gmouse_3d_menu_actions_start = nullptr;
     gGameMouseActionMenuHighlightedItemIndex = 0;
     gGameMouseActionMenuItemsLength = 0;

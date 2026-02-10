@@ -23,6 +23,10 @@
 #include "text_font.h"
 #include "window_manager.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define CREDITS_WINDOW_SCROLLING_DELAY (38)
@@ -64,6 +68,11 @@ void creditsOpen(const char* filePath, int backgroundFid, bool useReversedStyle)
     }
 
     soundContinueAll();
+
+#ifdef __3DS__
+    setPreviousRectMap(0);
+    setActiveRectMap(DISPLAY_FULL);
+#endif
 
     char localizedPath[COMPAT_MAX_PATH];
     if (_message_make_path(localizedPath, sizeof(localizedPath), filePath)) {
@@ -249,6 +258,10 @@ void creditsOpen(const char* filePath, int backgroundFid, bool useReversedStyle)
             fileClose(gCreditsFile);
         }
     }
+
+#ifdef __3DS__
+    setActiveRectMap(getPreviousRectMap(0));
+#endif
 
     fontSetCurrent(oldFont);
 }

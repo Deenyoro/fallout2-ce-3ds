@@ -68,6 +68,11 @@
 #include "window_manager_private.h"
 #include "worldmap.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_input.h"
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define HELP_SCREEN_WIDTH (640)
@@ -479,7 +484,11 @@ void gameExit()
     _windowClose();
     messageListRepositoryExit();
     dbExit();
+#ifdef __3DS__
+    settingsExit(false); // only save when config is actually changed..
+#else
     settingsExit(true);
+#endif
     sfallConfigExit();
 }
 
@@ -674,7 +683,10 @@ int gameHandleKey(int eventCode, bool isInCombatMode)
             soundPlayFile("ib1p1xx1");
 
             int mode = -1;
-
+#ifdef __3DS__
+            setPreviousRectMap(0);
+            setActiveRectMap(DISPLAY_SKILLDEX);
+#endif
             // NOTE: There is an `inc` for this value to build jump table which
             // is not needed.
             int rc = skilldexOpen();
@@ -711,7 +723,9 @@ int gameHandleKey(int eventCode, bool isInCombatMode)
             default:
                 break;
             }
-
+#ifdef __3DS__
+            setActiveRectMap(getPreviousRectMap(0));
+#endif
             if (mode != -1) {
                 gameMouseSetCursor(MOUSE_CURSOR_USE_CROSSHAIR);
                 gameMouseSetMode(mode);
@@ -1342,7 +1356,11 @@ static int gameDbInit()
 
     int master_db_handle = dbOpen(main_file_name, 0, patch_file_name, 1);
     if (master_db_handle == -1) {
+#ifdef __3DS__
+        showMesageBox("Could not find the master datafile.\n\nPlease move 'MASTER.DAT'\nto 'sdmc:/3ds/fallout2/'");
+#else
         showMesageBox("Could not find the master datafile. Please make sure the FALLOUT CD is in the drive and that you are running FALLOUT from the directory you installed it to.");
+#endif
         return -1;
     }
 
@@ -1358,7 +1376,11 @@ static int gameDbInit()
 
     int critter_db_handle = dbOpen(main_file_name, 0, patch_file_name, 1);
     if (critter_db_handle == -1) {
+#ifdef __3DS__
+        showMesageBox("Could not find the critter datafile.\n\nPlease move 'CRITTER.DAT'\nto 'sdmc:/3ds/fallout2/'");
+#else
         showMesageBox("Could not find the critter datafile. Please make sure the FALLOUT CD is in the drive and that you are running FALLOUT from the directory you installed it to.");
+#endif
         return -1;
     }
 
@@ -1503,6 +1525,9 @@ static void showSplash()
     internal_free(palette);
 
     settings.system.splash = splash + 1;
+#ifdef __3DS__
+    settingsSave();
+#endif
 }
 
 int gameShowDeathDialog(const char* message)
