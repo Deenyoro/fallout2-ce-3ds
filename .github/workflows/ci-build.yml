@@ -33,6 +33,11 @@ jobs:
           git clone --recursive --depth 1 https://github.com/diasurgical/bannertool.git /tmp/bannertool
           make -C /tmp/bannertool
           cp /tmp/bannertool/output/*/bannertool $DEVKITPRO/tools/bin/
+          # Build makerom (not included in devkitPro container)
+          git clone --depth 1 https://github.com/3DSGuy/Project_CTR.git /tmp/Project_CTR
+          make -C /tmp/Project_CTR/makerom deps
+          make -C /tmp/Project_CTR/makerom
+          cp /tmp/Project_CTR/makerom/bin/makerom $DEVKITPRO/tools/bin/
 
       - name: Fetch fpattern
         run: |
