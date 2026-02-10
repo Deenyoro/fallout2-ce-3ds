@@ -343,34 +343,46 @@ int gameInitWithOptions(const char* windowTitle, bool isMapper, int font, int a4
 
     debugPrint(">wmWorldMap_init\t");
 
+    CTR_LOG("gameInit: characterEditorInit...");
     characterEditorInit();
+    CTR_LOG("gameInit: characterEditorInit done");
     debugPrint(">CharEditInit\t");
 
+    CTR_LOG("gameInit: pipboyInit...");
     pipboyInit();
+    CTR_LOG("gameInit: pipboyInit done");
     debugPrint(">pip_init\t\t");
 
+    CTR_LOG("gameInit: InitLoadSave...");
     _InitLoadSave();
     lsgInit();
+    CTR_LOG("gameInit: InitLoadSave done");
     debugPrint(">InitLoadSave\t");
 
+    CTR_LOG("gameInit: gameDialogInit...");
     if (gameDialogInit() != 0) {
         debugPrint("Failed on gdialog_init\n");
         return -1;
     }
+    CTR_LOG("gameInit: gameDialogInit done");
 
     debugPrint(">gdialog_init\t");
 
+    CTR_LOG("gameInit: combatInit...");
     if (combatInit() != 0) {
         debugPrint("Failed on combat_init\n");
         return -1;
     }
+    CTR_LOG("gameInit: combatInit done");
 
     debugPrint(">combat_init\t");
 
+    CTR_LOG("gameInit: automapInit...");
     if (automapInit() != 0) {
         debugPrint("Failed on automap_init\n");
         return -1;
     }
+    CTR_LOG("gameInit: automapInit done");
 
     debugPrint(">automap_init\t");
 
@@ -412,7 +424,9 @@ int gameInitWithOptions(const char* windowTitle, bool isMapper, int font, int a4
     debugPrint(">endgameDeathEndingInit\n");
 
     // SFALL
+    CTR_LOG("gameInit: premadeCharactersInit...");
     premadeCharactersInit();
+    CTR_LOG("gameInit: premadeCharactersInit done");
 
     if (!sfall_gl_vars_init()) {
         debugPrint("Failed on sfall_gl_vars_init");
