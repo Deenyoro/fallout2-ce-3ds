@@ -95,10 +95,17 @@ int falloutMain(int argc, char** argv)
     // SFALL: Allow to skip intro movies
     int skipOpeningMovies;
     configGetInt(&gSfallConfig, SFALL_CONFIG_MISC_KEY, SFALL_CONFIG_SKIP_OPENING_MOVIES_KEY, &skipOpeningMovies);
+    CTR_LOG("falloutMain: skipOpeningMovies check");
     if (skipOpeningMovies < 1) {
+        CTR_LOG("falloutMain: playing IPLOGO...");
         gameMoviePlay(MOVIE_IPLOGO, GAME_MOVIE_FADE_IN);
+        CTR_LOG("falloutMain: playing INTRO...");
         gameMoviePlay(MOVIE_INTRO, 0);
+        CTR_LOG("falloutMain: playing CREDITS...");
         gameMoviePlay(MOVIE_CREDITS, 0);
+        CTR_LOG("falloutMain: movies done");
+    } else {
+        CTR_LOG("falloutMain: skipping movies");
     }
 
     CTR_LOG("falloutMain: calling mainMenuWindowInit");
