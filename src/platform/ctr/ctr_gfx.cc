@@ -1,4 +1,5 @@
 #include <malloc.h>
+#include <stdio.h>
 
 #include "ctr_input.h"
 #include "ctr_gfx.h"
@@ -477,8 +478,24 @@ void drawFrameRect()
     C3D_TexBind(0, &render_tex);
 }
 
+// Pre-computed BGR palette lookup table
+static uint32_t bgrPalette[256];
+
+static inline void updateBgrPalette(SDL_Color* palette)
+{
+    for (int i = 0; i < 256; i++) {
+        bgrPalette[i] = (palette[i].r << 16) | (palette[i].g << 8) | palette[i].b;
+    }
+}
+
 void ctr_gfx_draw(SDL_Surface* gSdlSurface)
 {
+    static int gfxFrameCount = 0;
+    static u64 gfxTotalConvert = 0;
+    static u64 gfxTotalTransfer = 0;
+    static u64 gfxTotalDraw = 0;
+    u64 tStart = osGetTime();
+
     C3D_BindProgram(&program);
 
     uLoc_projection = shaderInstanceGetUniformLocation(program.vertexShader, "projection");
@@ -497,43 +514,63 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
     int surfaceWidth = gSdlSurface->w;
     int surfaceHeight = gSdlSurface->h;
 
-    int chunk = 16;
+    // Determine which rows need conversion
+    int startY = 0;
+    int endY = surfaceHeight;
 
-    for (int y = 0; y < surfaceHeight; y++) {
+    // During movie playback, only convert the movie area rows
+    // Movie frames are centered in the 640x480 window, typically ~320 rows tall
+    // The render texture is persistent so unchanged rows retain previous values
+    if (ctr_rectMap.active == DISPLAY_MOVIE) {
+        // Use the DISPLAY_MOVIE source rect to determine which rows matter
+        if (numRectsInMap[DISPLAY_MOVIE] > 0) {
+            startY = rectMaps[DISPLAY_MOVIE][0]->src_y;
+            endY = startY + rectMaps[DISPLAY_MOVIE][0]->src_h;
+            if (endY > surfaceHeight) endY = surfaceHeight;
+            if (startY < 0) startY = 0;
+            // Also include the subtitle area from DISPLAY_MOVIE_SUB
+            if (numRectsInMap[DISPLAY_MOVIE_SUB] > 0) {
+                int subEnd = rectMaps[DISPLAY_MOVIE_SUB][0]->src_y + rectMaps[DISPLAY_MOVIE_SUB][0]->src_h;
+                if (subEnd > endY && subEnd <= surfaceHeight) endY = subEnd;
+            }
+        }
+    }
+
+    // Update BGR lookup table if palette changed
+    updateBgrPalette(palette);
+
+    for (int y = startY; y < endY; y++) {
         Uint8* rowDst = dst + y * renderTextureStride;
         Uint8* rowSrc = src + y * surfaceWidth;
 
         int x = 0;
-
-        // chunks of 16 pixels
-        for (; x <= surfaceWidth - chunk; x += chunk) {
-            for (int i = 0; i < chunk; i++) {
-                Uint32 colorIndex = rowSrc[x + i];
-                SDL_Color pixelColor = palette[colorIndex];
-
-                rowDst[(x + i) * 3 + 0] = pixelColor.b;
-                rowDst[(x + i) * 3 + 1] = pixelColor.g;
-                rowDst[(x + i) * 3 + 2] = pixelColor.r;
-            }
+        for (; x <= surfaceWidth - 4; x += 4) {
+            uint32_t c0 = bgrPalette[rowSrc[x]];
+            uint32_t c1 = bgrPalette[rowSrc[x + 1]];
+            uint32_t c2 = bgrPalette[rowSrc[x + 2]];
+            uint32_t c3 = bgrPalette[rowSrc[x + 3]];
+            Uint8* d = rowDst + x * 3;
+            d[0] = c0; d[1] = c0 >> 8; d[2] = c0 >> 16;
+            d[3] = c1; d[4] = c1 >> 8; d[5] = c1 >> 16;
+            d[6] = c2; d[7] = c2 >> 8; d[8] = c2 >> 16;
+            d[9] = c3; d[10] = c3 >> 8; d[11] = c3 >> 16;
         }
-
-        // remaining pixels
         for (; x < surfaceWidth; x++) {
-            Uint32 colorIndex = rowSrc[x];
-            SDL_Color pixelColor = palette[colorIndex];
-
-            rowDst[x * 3 + 0] = pixelColor.b;
-            rowDst[x * 3 + 1] = pixelColor.g;
-            rowDst[x * 3 + 2] = pixelColor.r;
+            uint32_t c = bgrPalette[rowSrc[x]];
+            rowDst[x * 3 + 0] = c;
+            rowDst[x * 3 + 1] = c >> 8;
+            rowDst[x * 3 + 2] = c >> 16;
         }
     }
+
+    u64 tAfterConvert = osGetTime();
 
     GSPGPU_FlushDataCache(renderTextureData, renderTextureByteCount);
 
     C3D_SyncDisplayTransfer((u32*)renderTextureData, GX_BUFFER_DIM(renderTextureWidth, renderTextureHeight),
             (u32*)render_tex.data, GX_BUFFER_DIM(renderTextureWidth, renderTextureHeight), TEXTURE_TRANSFER_FLAGS);
 
-    GSPGPU_FlushDataCache(render_tex.data, renderTextureByteCount);
+    u64 tAfterTransfer = osGetTime();
 
     C3D_TexBind(0, &render_tex);
 
@@ -543,6 +580,24 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
     C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
 
     drawRects();
+
+    u64 tAfterDraw = osGetTime();
+
+    gfxTotalConvert += (tAfterConvert - tStart);
+    gfxTotalTransfer += (tAfterTransfer - tAfterConvert);
+    gfxTotalDraw += (tAfterDraw - tAfterTransfer);
+    gfxFrameCount++;
+
+    if (gfxFrameCount == 60) {
+        char buf[128];
+        snprintf(buf, sizeof(buf), "gfx60f: conv=%lums xfer=%lums draw=%lums rows=%d-%d",
+            (unsigned long)gfxTotalConvert, (unsigned long)gfxTotalTransfer, (unsigned long)gfxTotalDraw, startY, endY);
+        ctr_debug_log(buf);
+        gfxFrameCount = 0;
+        gfxTotalConvert = 0;
+        gfxTotalTransfer = 0;
+        gfxTotalDraw = 0;
+    }
 }
 
 void beginRender(bool vSync)

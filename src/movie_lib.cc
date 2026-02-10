@@ -12,6 +12,10 @@
 #include "delay.h"
 #include "platform_compat.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_sys.h"
+#endif
+
 namespace fallout {
 
 typedef struct MveMem {
@@ -903,10 +907,33 @@ static void _MVE_sndSync()
 
     v0 = false;
 
+#ifdef __3DS__
+    static int sndSyncFrameCount = 0;
+    static unsigned int sndSyncTotalTime = 0;
+    unsigned int sndSyncStart = compat_timeGetTime();
+#endif
+
     sync_late = syncWaitLevel(sync_wait_quanta / 4) > -sync_wait_quanta / 2 && !sync_FrameDropped;
     sync_FrameDropped = 0;
 
+#ifdef __3DS__
+    unsigned int sndSyncAfterWait = compat_timeGetTime();
+#endif
+
     if (gMveSoundBuffer == -1) {
+#ifdef __3DS__
+        sndSyncFrameCount++;
+        unsigned int elapsed = compat_timeGetTime() - sndSyncStart;
+        sndSyncTotalTime += elapsed;
+        if (sndSyncFrameCount == 30) {
+            char buf[128];
+            snprintf(buf, sizeof(buf), "sndSync(noaud): avg=%ums syncWait=%ums late=%d",
+                sndSyncTotalTime / 30, (sndSyncAfterWait - sndSyncStart), sync_late);
+            ctr_debug_log(buf);
+            sndSyncFrameCount = 0;
+            sndSyncTotalTime = 0;
+        }
+#endif
         return;
     }
 
@@ -1012,7 +1039,7 @@ static void _MVE_sndSync()
         }
         v0 = true;
 
-#ifdef EMSCRIPTEN
+#if defined(EMSCRIPTEN) || defined(__3DS__)
         delay_ms(1);
 #endif
     }
