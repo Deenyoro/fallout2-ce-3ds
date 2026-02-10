@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
     const char* basepath = "sdmc:/3ds/fallout2/";
     chdir(basepath);
 
-    ctr_debug_log("=== Fallout 2 CE 3DS startup ===");
+    ctr_debug_log("=== Fallout 2 CE 3DS v0.0.9 ===");
     ctr_debug_log("chdir done");
 
     linearHeapAvailableAtStart = ctr_sys_check_linear_heap();
