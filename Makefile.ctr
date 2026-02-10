@@ -179,10 +179,22 @@ ifneq ($(ROMFS),)
 	export _3DSXFLAGS += --romfs=$(CURDIR)/$(ROMFS)
 endif
 
-.PHONY: all clean 3dslink gdb deps
+.PHONY: all clean 3dslink gdb do-build
 
 #---------------------------------------------------------------------------------
-all: deps $(BUILD) $(GFXBUILD) $(DEPSDIR) $(ROMFS_T3XFILES) $(T3XHFILES)
+# Fetch fpattern if needed, then re-invoke make so wildcards find fpattern sources.
+# Wildcards expand at parse time, so fpattern must exist before the Makefile that
+# computes OFILES is parsed. The re-invocation forces a fresh parse.
+#---------------------------------------------------------------------------------
+all:
+	@if [ ! -f $(FPATTERN_DIR)/include/fpattern/fpattern.h ]; then \
+		echo "Fetching fpattern..." && \
+		git clone $(FPATTERN_REPO) $(FPATTERN_DIR) && \
+		cd $(FPATTERN_DIR) && git checkout $(FPATTERN_TAG); \
+	fi
+	@$(MAKE) --no-print-directory -f $(CURDIR)/Makefile.ctr do-build
+
+do-build: $(BUILD) $(GFXBUILD) $(DEPSDIR) $(ROMFS_T3XFILES) $(T3XHFILES)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile.ctr
 
 $(BUILD):
@@ -196,16 +208,6 @@ ifneq ($(DEPSDIR),$(BUILD))
 $(DEPSDIR):
 	@mkdir -p $@
 endif
-
-#---------------------------------------------------------------------------------
-# Fetch fpattern dependency if not present
-#---------------------------------------------------------------------------------
-deps: $(FPATTERN_DIR)/include/fpattern/fpattern.h
-
-$(FPATTERN_DIR)/include/fpattern/fpattern.h:
-	@echo "Fetching fpattern..."
-	@git clone $(FPATTERN_REPO) $(FPATTERN_DIR)
-	@cd $(FPATTERN_DIR) && git checkout $(FPATTERN_TAG)
 
 #---------------------------------------------------------------------------------
 clean:
