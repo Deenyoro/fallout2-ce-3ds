@@ -213,7 +213,8 @@ void input_frame_axis(int *delta_x, int *delta_y)
 
     if ((ctr_rectMap.active == DISPLAY_FULL) || (ctr_rectMap.active == DISPLAY_FIELD) ||
             (ctr_rectMap.active == DISPLAY_GUI) || (ctr_rectMap.active == DISPLAY_WORLDMAP) ||
-            (ctr_rectMap.active == DISPLAY_CHAR_SELECT) || (ctr_rectMap.active == DISPLAY_CHAR)) {
+            (ctr_rectMap.active == DISPLAY_CHAR_SELECT) || (ctr_rectMap.active == DISPLAY_CHAR) ||
+            (ctr_rectMap.active == DISPLAY_MAIN)) {
 
         circlePosition circle;
         hidCircleRead(&circle);
@@ -334,7 +335,7 @@ void input_frame_buttons(int *delta_x, int *delta_y, int *buttons)
         if ((ctr_rectMap.active == DISPLAY_FULL) ||
                 (ctr_rectMap.active == DISPLAY_FIELD) || (ctr_rectMap.active == DISPLAY_GUI) ||
                 (ctr_rectMap.active == DISPLAY_WORLDMAP) || (ctr_rectMap.active == DISPLAY_CHAR_SELECT) ||
-                (ctr_rectMap.active == DISPLAY_CHAR)) {
+                (ctr_rectMap.active == DISPLAY_CHAR) || (ctr_rectMap.active == DISPLAY_MAIN)) {
             if (KEY_HELD(KEY_R)) {
                 *buttons |= MOUSE_STATE_LEFT_BUTTON_DOWN;
             }

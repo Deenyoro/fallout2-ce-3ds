@@ -9,6 +9,10 @@
 #include "input.h"
 #include "svga.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_sys.h"
+#endif
+
 namespace fallout {
 
 static void _palette_reset_();
@@ -47,6 +51,12 @@ void paletteInit()
 
     // Calculate fade steps needed to perform fading in about 700 ms.
     gPaletteFadeSteps = 60 * 700 / actualFadeDuration;
+
+#ifdef __3DS__
+    char fadeMsg[80];
+    snprintf(fadeMsg, sizeof(fadeMsg), "paletteInit: duration=%u steps=%d", actualFadeDuration, gPaletteFadeSteps);
+    ctr_debug_log(fadeMsg);
+#endif
 
     debugPrint("\nFade time is %u\nFade steps are %d\n", actualFadeDuration, gPaletteFadeSteps);
 }
