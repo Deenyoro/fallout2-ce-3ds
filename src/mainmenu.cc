@@ -18,6 +18,10 @@
 #include "version.h"
 #include "window_manager.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_sys.h"
+#endif
+
 namespace fallout {
 
 #define MAIN_MENU_WINDOW_WIDTH 640
@@ -319,7 +323,13 @@ int mainMenuWindowHandleEvents()
         for (int buttonIndex = 0; buttonIndex < MAIN_MENU_BUTTON_COUNT; buttonIndex++) {
             if (keyCode == gMainMenuButtonKeyBindings[buttonIndex] || keyCode == toupper(gMainMenuButtonKeyBindings[buttonIndex])) {
                 // NOTE: Uninline.
+#ifdef __3DS__
+                ctr_debug_log("mainMenu: button pressed, playing sound");
+#endif
                 main_menu_play_sound("nmselec1");
+#ifdef __3DS__
+                ctr_debug_log("mainMenu: sound done");
+#endif
 
                 rc = _return_values[buttonIndex];
 
@@ -369,11 +379,19 @@ int mainMenuWindowHandleEvents()
         sharedFpsLimiter.throttle();
     }
 
+#ifdef __3DS__
+    ctr_debug_log("mainMenu: exiting event loop");
+#endif
+
     if (oldCursorIsHidden) {
         mouseHideCursor();
     }
 
     _in_main_menu = false;
+
+#ifdef __3DS__
+    ctr_debug_log("mainMenu: returning");
+#endif
 
     return rc;
 }
