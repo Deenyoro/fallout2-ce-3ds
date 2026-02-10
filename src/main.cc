@@ -111,12 +111,20 @@ int falloutMain(int argc, char** argv)
                 setActiveRectMap(DISPLAY_MAIN);
 #endif
             keyboardReset();
+#ifdef __3DS__
+            // Test: skip music (hangs on emulator), unhide without fade, auto-select New Game
+            // This exercises the full mainMenuWindowHide(true) -> paletteFadeTo path
+            mainMenuWindowUnhide(0);  // unhide WITHOUT animation so gMainMenuWindowHidden=false
+            CTR_LOG("falloutMain: menu unhidden (no anim), auto-selecting NEW_GAME");
+            int mainMenuRc = MAIN_MENU_NEW_GAME;
+#else
             _gsound_background_play_level_music("07desert", 11);
             mainMenuWindowUnhide(1);
 
             mouseShowCursor();
             int mainMenuRc = mainMenuWindowHandleEvents();
             mouseHideCursor();
+#endif
 
             switch (mainMenuRc) {
             case MAIN_MENU_INTRO:
