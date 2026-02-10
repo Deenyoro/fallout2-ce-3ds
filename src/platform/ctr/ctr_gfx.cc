@@ -533,19 +533,21 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
     updateRgb565Palette(palette);
 
     for (int y = startY; y < endY; y++) {
-        uint16_t* rowDst = (uint16_t*)(dst + y * renderTextureStride);
+        uint32_t* rowDst32 = (uint32_t*)(dst + y * renderTextureStride);
         Uint8* rowSrc = src + y * surfaceWidth;
 
         int x = 0;
-        // Process 4 pixels at a time: 4 table lookups + 4 halfword stores
+        // Process 4 pixels at a time: pack 2 RGB565 values per 32-bit store
         for (; x <= surfaceWidth - 4; x += 4) {
-            rowDst[x]     = rgb565Palette[rowSrc[x]];
-            rowDst[x + 1] = rgb565Palette[rowSrc[x + 1]];
-            rowDst[x + 2] = rgb565Palette[rowSrc[x + 2]];
-            rowDst[x + 3] = rgb565Palette[rowSrc[x + 3]];
+            uint32_t s = *(uint32_t*)(rowSrc + x);
+            rowDst32[x >> 1]       = rgb565Palette[s & 0xFF]
+                                   | ((uint32_t)rgb565Palette[(s >> 8) & 0xFF] << 16);
+            rowDst32[(x >> 1) + 1] = rgb565Palette[(s >> 16) & 0xFF]
+                                   | ((uint32_t)rgb565Palette[s >> 24] << 16);
         }
+        uint16_t* rowDst16 = (uint16_t*)(dst + y * renderTextureStride);
         for (; x < surfaceWidth; x++) {
-            rowDst[x] = rgb565Palette[rowSrc[x]];
+            rowDst16[x] = rgb565Palette[rowSrc[x]];
         }
     }
 
