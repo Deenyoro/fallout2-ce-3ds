@@ -107,24 +107,20 @@ int falloutMain(int argc, char** argv)
         bool done = false;
         while (!done) {
 #ifdef __3DS__
+            // Auto-select New Game for debugging - skip menu display
+            CTR_LOG("falloutMain: auto-selecting NEW_GAME");
+            int mainMenuRc = MAIN_MENU_NEW_GAME;
+#else
             if (ctr_rectMap.active != DISPLAY_MAIN)
                 setActiveRectMap(DISPLAY_MAIN);
-#endif
             keyboardReset();
             _gsound_background_play_level_music("07desert", 11);
             mainMenuWindowUnhide(1);
 
             mouseShowCursor();
-            CTR_LOG("falloutMain: calling mainMenuWindowHandleEvents");
-#ifdef __3DS__
-            // Auto-select New Game for debugging
-            int mainMenuRc = MAIN_MENU_NEW_GAME;
-            CTR_LOG("falloutMain: auto-selected NEW_GAME for debug");
-#else
             int mainMenuRc = mainMenuWindowHandleEvents();
-#endif
-            CTR_LOG("falloutMain: mainMenuWindowHandleEvents returned");
             mouseHideCursor();
+#endif
 
             switch (mainMenuRc) {
             case MAIN_MENU_INTRO:
