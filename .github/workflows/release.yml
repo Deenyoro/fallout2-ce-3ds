@@ -35,6 +35,11 @@ jobs:
           make -C /tmp/bannertool
           cp /tmp/bannertool/output/*/bannertool $DEVKITPRO/tools/bin/
 
+      - name: Fetch fpattern
+        run: |
+          git clone https://github.com/alexbatalov/fpattern.git third_party/fpattern-src
+          cd third_party/fpattern-src && git checkout 8523173ec252c3b796fcdfca0fcc6329642fbbe3
+
       - name: Build
         run: |
           make -f Makefile.ctr -j$(nproc)
