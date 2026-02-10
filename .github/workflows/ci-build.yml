@@ -17,9 +17,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install bannertool
         run: |
-          dkp-pacman -Sy --noconfirm 3ds-sdl2 3ds-zlib
           apt-get update -qq
           apt-get install -y -qq build-essential
           git clone --recursive --depth 1 https://github.com/diasurgical/bannertool.git /tmp/bannertool
