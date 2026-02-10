@@ -35,6 +35,10 @@
 #include "word_wrap.h"
 #include "worldmap.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 // The maximum number of subtitle lines per slide.
@@ -562,6 +566,11 @@ static int endgameEndingSlideshowWindowInit()
     gEndgameEndingSlideshowOldFont = fontGetCurrent();
     fontSetCurrent(101);
 
+#ifdef __3DS__
+    setPreviousRectMap(0);
+    setActiveRectMap(DISPLAY_ENDGAME);
+#endif
+
     paletteFadeTo(gPaletteBlack);
 
     // CE: Every slide has a separate color palette which is incompatible with
@@ -655,6 +664,9 @@ static void endgameEndingSlideshowWindowFree()
     if (_endgame_map_enabled) {
         isoEnable();
     }
+#ifdef __3DS__
+    setActiveRectMap(getPreviousRectMap(0));
+#endif
 }
 
 // 0x4401A0

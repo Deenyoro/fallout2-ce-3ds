@@ -82,6 +82,29 @@ $ mv app /Applications/Fallout2
 
 - Use Finder (macOS Catalina and later) or iTunes (Windows and macOS Mojave or earlier) to copy `master.dat`, `critter.dat`, `patch000.dat`, and `data` folder to "Fallout 2" app ([how-to](https://support.apple.com/HT210598)). Watch for file names - keep (or make) them lowercased (see [Configuration](#configuration)).
 
+### Nintendo 3DS
+
+> **NOTE**: The 3DS port is based on the work by [MrHuu](https://github.com/MrHuu/fallout1-ce-3ds), who created the original Fallout 1 Community Edition 3DS port. The 3DS platform layer, rendering pipeline, and input system were adapted from that project.
+
+- Use Windows installation as a base - it contains data assets needed to play. Copy `master.dat`, `critter.dat`, `patch000.dat`, and `data` folder to `sdmc:/3ds/fallout2/` on your SD card. Watch for file names - keep (or make) them lowercased.
+
+- Download `fallout2-ce.3dsx` (or `fallout2-ce.cia`) and install it on your 3DS.
+
+- The game renders on the top screen (400x240) with touch controls on the bottom screen (320x240). Controls:
+  - Circle Pad: Move mouse cursor
+  - A: Left click
+  - B: Right click
+  - Touchscreen: Direct cursor positioning on bottom screen
+  - D-Pad: Scroll map view
+  - Start: Open menu
+
+- Building from source requires [devkitPro](https://devkitpro.org/) with devkitARM and the following packages: `3ds-sdl2`, `3ds-zlib`, `libctru`, `citro3d`, `citro2d`.
+
+```console
+$ make deps
+$ make -f Makefile.ctr
+```
+
 ## Configuration
 
 The main configuration file is `fallout2.cfg`. There are several important settings you might need to adjust for your installation. Depending on your Fallout distribution main game assets `master.dat`, `critter.dat`, `patch000.dat`, and `data` folder might be either all lowercased, or all uppercased. You can either update `master_dat`, `critter_dat`, `master_patches` and `critter_patches` settings to match your file names, or rename files to match entries in your `fallout2.cfg`.
@@ -113,6 +136,11 @@ Integrating Sfall goodies is the top priority. Quality of life updates are OK to
 ### Intergrating Sfall
 
 There are literally hundreds if not thousands of fixes and features in sfall. I guess not all of them are needed in Community Edition, but for the sake of compatibility with big mods out there, let's integrate them all.
+
+## Acknowledgments
+
+- [alexbatalov](https://github.com/alexbatalov/fallout2-ce) - Fallout 2 Community Edition
+- [MrHuu](https://github.com/MrHuu/fallout1-ce-3ds) - Original Fallout 1 Community Edition 3DS port, whose platform layer, Citro3D rendering pipeline, dual-screen rectmap system, and input handling code were adapted for this Fallout 2 3DS port
 
 ## License
 

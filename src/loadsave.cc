@@ -60,6 +60,11 @@
 #include "word_wrap.h"
 #include "worldmap.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_input.h"
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define LOAD_SAVE_SIGNATURE "FALLOUT SAVE FILE"
@@ -498,6 +503,11 @@ int lsgSaveGame(int mode)
     _DrawInfoBox(_slot_cursor);
     windowRefresh(gLoadSaveWindow);
 
+#ifdef __3DS__
+    setPreviousRectMap(0);
+    setActiveRectMap(DISPLAY_LOADSAVE);
+#endif
+
     _dbleclkcntr = 24;
 
     int rc = -1;
@@ -511,6 +521,9 @@ int lsgSaveGame(int mode)
         int scrollDirection = LOAD_SAVE_SCROLL_DIRECTION_NONE;
 
         convertMouseWheelToArrowKey(&keyCode);
+#ifdef __3DS__
+        setSaveSlotOffset(_slot_cursor);
+#endif
 
         if (keyCode == KEY_ESCAPE || keyCode == 501 || _game_user_wants_to_quit != 0) {
             rc = 0;
@@ -781,7 +794,9 @@ int lsgSaveGame(int mode)
                         showDialogBox(_str0, body, 2, 169, 116, _colorTable[32328], nullptr, _colorTable[32328], DIALOG_BOX_LARGE);
 
                         lsgWindowFree(0);
-
+#ifdef __3DS__
+                        setActiveRectMap(getPreviousRectMap(0));
+#endif
                         return -1;
                     }
 
@@ -830,7 +845,9 @@ int lsgSaveGame(int mode)
             _quick_done = true;
         }
     }
-
+#ifdef __3DS__
+    setActiveRectMap(getPreviousRectMap(0));
+#endif
     return rc;
 }
 
@@ -942,7 +959,10 @@ int lsgLoadGame(int mode)
     }
 
     _quick_done = false;
-
+#ifdef __3DS__
+    setPreviousRectMap(0);
+    setActiveRectMap(DISPLAY_LOADSAVE);
+#endif
     int windowType;
     switch (mode) {
     case LOAD_SAVE_MODE_FROM_MAIN_MENU:
@@ -1259,7 +1279,9 @@ int lsgLoadGame(int mode)
                 break;
             }
         }
-
+#ifdef __3DS__
+        setSaveSlotOffset(_slot_cursor);
+#endif
         renderPresent();
         sharedFpsLimiter.throttle();
     }
@@ -1273,6 +1295,10 @@ int lsgLoadGame(int mode)
             _quick_done = true;
         }
     }
+
+#ifdef __3DS__
+    setActiveRectMap(getPreviousRectMap(0));
+#endif
 
     return rc;
 }
@@ -2308,11 +2334,11 @@ static int _get_input_str2(int win, int doneKeyCode, int cancelKeyCode, char* de
 
     char text[256];
     strcpy(text, description);
-
+#ifndef __3DS__
     size_t textLength = strlen(text);
     text[textLength] = ' ';
     text[textLength + 1] = '\0';
-
+#endif
     int nameWidth = fontGetStringWidth(text);
 
     bufferFill(windowBuffer + windowWidth * y + x, nameWidth, lineHeight, windowWidth, backgroundColor);
@@ -2320,7 +2346,15 @@ static int _get_input_str2(int win, int doneKeyCode, int cancelKeyCode, char* de
 
     windowRefresh(win);
     renderPresent();
-
+#ifdef __3DS__
+    int rc = 1;
+    renderPresent();
+    ctr_input_swkbd("", text, description);
+    bufferFill(windowBuffer + windowWidth * y + x, fontGetStringWidth(text), lineHeight, windowWidth, backgroundColor);
+    fontDrawText(windowBuffer + windowWidth * y + x, text, windowWidth, windowWidth, textColor);
+    renderPresent();
+    rc = 0;
+#else
     beginTextInput();
 
     int blinkCounter = 3;
@@ -2397,7 +2431,7 @@ static int _get_input_str2(int win, int doneKeyCode, int cancelKeyCode, char* de
         text[textLength] = '\0';
         strcpy(description, text);
     }
-
+#endif
     return rc;
 }
 

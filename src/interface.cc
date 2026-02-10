@@ -35,6 +35,10 @@
 #include "tile.h"
 #include "window_manager.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 // The width of connectors in the indicator box.
@@ -2361,6 +2365,10 @@ int indicatorBarRefresh()
             windowRefresh(gIndicatorBarWindow);
         }
 
+#ifdef __3DS__
+        setIndicatorSlotNum(count);
+#endif
+
         return count;
     }
 
@@ -2368,6 +2376,10 @@ int indicatorBarRefresh()
         windowDestroy(gIndicatorBarWindow);
         gIndicatorBarWindow = -1;
     }
+
+#ifdef __3DS__
+    setIndicatorSlotNum(0);
+#endif
 
     return 0;
 }

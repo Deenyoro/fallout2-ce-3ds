@@ -5,6 +5,10 @@
 
 #include <algorithm>
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 #include "art.h"
 #include "cycle.h"
 #include "debug.h"
@@ -568,6 +572,13 @@ static int elevatorWindowInit(int elevator)
         return -1;
     }
 
+#ifdef __3DS__
+    setRectMapPos(DISPLAY_DYNAMIC, elevatorWindowX, elevatorWindowY,
+            _elevatorBackgroundFrmImage.getWidth(), _elevatorBackgroundFrmImage.getHeight(), false);
+    setPreviousRectMap(0);
+    setActiveRectMap(DISPLAY_DYNAMIC);
+#endif
+
     gElevatorWindowBuffer = windowGetBuffer(gElevatorWindow);
     memcpy(gElevatorWindowBuffer, _elevatorBackgroundFrmImage.getData(), _elevatorBackgroundFrmImage.getWidth() * _elevatorBackgroundFrmImage.getHeight());
 
@@ -607,6 +618,10 @@ static int elevatorWindowInit(int elevator)
 // 0x43F6D0
 static void elevatorWindowFree()
 {
+#ifdef __3DS__
+    setActiveRectMap(getPreviousRectMap(0));
+#endif
+
     windowDestroy(gElevatorWindow);
 
     _elevatorBackgroundFrmImage.unlock();

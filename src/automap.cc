@@ -27,6 +27,10 @@
 #include "text_font.h"
 #include "window_manager.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define AUTOMAP_OFFSET_COUNT (AUTOMAP_MAP_COUNT * ELEVATION_COUNT)
@@ -397,6 +401,13 @@ void automapShow(bool isInGame, bool isUsingScanner)
     bool isoWasEnabled = isoDisable();
     gameMouseSetCursor(MOUSE_CURSOR_ARROW);
 
+#ifdef __3DS__
+    setPreviousRectMap(0);
+    setRectMapPos(DISPLAY_DYNAMIC, automapWindowX, automapWindowY,
+            AUTOMAP_WINDOW_WIDTH, AUTOMAP_WINDOW_HEIGHT, false);
+    setActiveRectMap(DISPLAY_DYNAMIC);
+#endif
+
     bool done = false;
     while (!done) {
         sharedFpsLimiter.mark();
@@ -485,6 +496,10 @@ void automapShow(bool isInGame, bool isUsingScanner)
         renderPresent();
         sharedFpsLimiter.throttle();
     }
+
+#ifdef __3DS__
+    setActiveRectMap(getPreviousRectMap(0));
+#endif
 
     if (isoWasEnabled) {
         isoEnable();

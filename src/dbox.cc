@@ -23,6 +23,10 @@
 #include "window_manager.h"
 #include "word_wrap.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define FILE_DIALOG_LINE_COUNT 12
@@ -521,6 +525,12 @@ int showDialogBox(const char* title, const char** body, int bodyLength, int x, i
         }
     }
 
+#ifdef __3DS__
+    setPreviousRectMap(1);
+    setRectMapPos(DISPLAY_DYNAMIC, x, y, backgroundFrmImage.getWidth(), backgroundFrmImage.getHeight(), false);
+    setActiveRectMap(DISPLAY_DYNAMIC);
+#endif
+
     windowRefresh(win);
 
     int rc = -1;
@@ -557,6 +567,11 @@ int showDialogBox(const char* title, const char** body, int bodyLength, int x, i
     windowDestroy(win);
     fontSetCurrent(savedFont);
 
+#ifdef __3DS__
+    if (rc == 1)
+        setIndicatorSlotNum(0);
+    setActiveRectMap(getPreviousRectMap(1));
+#endif
     if (v86) {
         messageListFree(&messageList);
     }

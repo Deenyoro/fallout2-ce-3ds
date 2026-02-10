@@ -50,6 +50,10 @@
 #include "tile.h"
 #include "window_manager.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define CITY_NAME_SIZE (40)
@@ -2992,6 +2996,10 @@ static int wmWorldMapFunc(int a1)
     int map = -1;
     int rc = 0;
 
+#ifdef __3DS__
+    setActiveRectMap(DISPLAY_WORLDMAP);
+#endif
+
     while (true) {
         sharedFpsLimiter.mark();
 
@@ -3272,6 +3280,10 @@ static int wmWorldMapFunc(int a1)
         renderPresent();
         sharedFpsLimiter.throttle();
     }
+
+#ifdef __3DS__
+    setActiveRectMap(DISPLAY_GUI);
+#endif
 
     if (wmInterfaceExit() == -1) {
         wmFadeReset();
@@ -5769,6 +5781,10 @@ static int wmTownMapFunc(int* mapIdxPtr)
 
     CityInfo* city = &(wmAreaInfoList[wmGenData.currentAreaId]);
 
+#ifdef __3DS__
+    setActiveRectMap(DISPLAY_WORLDMAP);
+#endif
+
     for (;;) {
         sharedFpsLimiter.mark();
 
@@ -5850,6 +5866,10 @@ static int wmTownMapFunc(int* mapIdxPtr)
         renderPresent();
         sharedFpsLimiter.throttle();
     }
+
+#ifdef __3DS__
+    setActiveRectMap(DISPLAY_GUI);
+#endif
 
     if (wmTownMapExit() == -1) {
         return -1;

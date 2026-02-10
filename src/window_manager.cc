@@ -6,6 +6,10 @@
 
 #include <SDL.h>
 
+#ifdef __3DS__
+#include <3ds.h>
+#endif
+
 #include "color.h"
 #include "debug.h"
 #include "dinput.h"
@@ -1336,6 +1340,15 @@ void programWindowSetTitle(const char* title)
 // 0x4D8200
 bool showMesageBox(const char* text)
 {
+#ifdef __3DS__
+    if (!gspHasGpuRight())
+        gfxInitDefault();
+
+    errorConf msg;
+    errorInit(&msg, ERROR_TEXT, CFG_LANGUAGE_EN);
+    errorText(&msg, text);
+    errorDisp(&msg);
+#else
     SDL_Cursor* prev = SDL_GetCursor();
     SDL_Cursor* cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
     SDL_SetCursor(cursor);
@@ -1344,6 +1357,7 @@ bool showMesageBox(const char* text)
     SDL_ShowCursor(SDL_DISABLE);
     SDL_SetCursor(prev);
     SDL_FreeCursor(cursor);
+#endif
     return true;
 }
 
