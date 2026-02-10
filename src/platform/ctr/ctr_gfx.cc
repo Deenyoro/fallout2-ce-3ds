@@ -30,7 +30,7 @@ static C3D_RenderTarget *bottomRenderTarget;
 static uint8_t *renderTextureData;
 static const uint16_t renderTextureWidth = 1024;
 static const uint16_t renderTextureHeight = 512;
-static const uint32_t renderTextureStride = renderTextureWidth * 3;
+static const uint32_t renderTextureStride = renderTextureWidth * 2; // RGB565: 2 bytes per pixel
 static const uint32_t renderTextureByteCount = renderTextureStride * renderTextureHeight;
 
 static C3D_Tex render_tex;
@@ -478,13 +478,15 @@ void drawFrameRect()
     C3D_TexBind(0, &render_tex);
 }
 
-// Pre-computed BGR palette lookup table
-static uint32_t bgrPalette[256];
+// Pre-computed RGB565 palette lookup table
+static uint16_t rgb565Palette[256];
 
-static inline void updateBgrPalette(SDL_Color* palette)
+static inline void updateRgb565Palette(SDL_Color* palette)
 {
     for (int i = 0; i < 256; i++) {
-        bgrPalette[i] = (palette[i].r << 16) | (palette[i].g << 8) | palette[i].b;
+        rgb565Palette[i] = ((palette[i].r >> 3) << 11)
+                         | ((palette[i].g >> 2) << 5)
+                         | (palette[i].b >> 3);
     }
 }
 
@@ -528,29 +530,22 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
         }
     }
 
-    updateBgrPalette(palette);
+    updateRgb565Palette(palette);
 
     for (int y = startY; y < endY; y++) {
-        Uint8* rowDst = dst + y * renderTextureStride;
+        uint16_t* rowDst = (uint16_t*)(dst + y * renderTextureStride);
         Uint8* rowSrc = src + y * surfaceWidth;
 
         int x = 0;
+        // Process 4 pixels at a time: 4 table lookups + 4 halfword stores
         for (; x <= surfaceWidth - 4; x += 4) {
-            uint32_t c0 = bgrPalette[rowSrc[x]];
-            uint32_t c1 = bgrPalette[rowSrc[x + 1]];
-            uint32_t c2 = bgrPalette[rowSrc[x + 2]];
-            uint32_t c3 = bgrPalette[rowSrc[x + 3]];
-            Uint8* d = rowDst + x * 3;
-            d[0] = c0; d[1] = c0 >> 8; d[2] = c0 >> 16;
-            d[3] = c1; d[4] = c1 >> 8; d[5] = c1 >> 16;
-            d[6] = c2; d[7] = c2 >> 8; d[8] = c2 >> 16;
-            d[9] = c3; d[10] = c3 >> 8; d[11] = c3 >> 16;
+            rowDst[x]     = rgb565Palette[rowSrc[x]];
+            rowDst[x + 1] = rgb565Palette[rowSrc[x + 1]];
+            rowDst[x + 2] = rgb565Palette[rowSrc[x + 2]];
+            rowDst[x + 3] = rgb565Palette[rowSrc[x + 3]];
         }
         for (; x < surfaceWidth; x++) {
-            uint32_t c = bgrPalette[rowSrc[x]];
-            rowDst[x * 3 + 0] = c;
-            rowDst[x * 3 + 1] = c >> 8;
-            rowDst[x * 3 + 2] = c >> 16;
+            rowDst[x] = rgb565Palette[rowSrc[x]];
         }
     }
 
@@ -635,7 +630,7 @@ void initTransferTexture()
 
     memset(renderTextureData, 0, renderTextureByteCount);
 
-    C3D_TexInitVRAM(&render_tex, renderTextureWidth, renderTextureHeight, GPU_RGB8);
+    C3D_TexInitVRAM(&render_tex, renderTextureWidth, renderTextureHeight, GPU_RGB565);
 
     setTextureFilter(-1);
 }
