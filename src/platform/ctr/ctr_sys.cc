@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <malloc.h>
+#include <unistd.h>
 
 #include <3ds.h>
 
@@ -81,6 +82,8 @@ void ctr_debug_log(const char* msg) {
     debugLogStarted = true;
     if (f) {
         fprintf(f, "%s\n", msg);
+        fflush(f);
+        fsync(fileno(f));
         fclose(f);
     }
 }
