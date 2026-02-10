@@ -137,7 +137,9 @@ int falloutMain(int argc, char** argv)
 #endif
                 CTR_LOG("NEW_GAME: calling characterSelectorOpen...");
                 if (characterSelectorOpen() == 2) {
+                    CTR_LOG("NEW_GAME: charSelector returned 2, playing elder movie");
                     gameMoviePlay(MOVIE_ELDER, GAME_MOVIE_STOP_MUSIC);
+                    CTR_LOG("NEW_GAME: elder movie done");
                     randomSeedPrerandom(-1);
 
                     // SFALL: Override starting map.
@@ -149,7 +151,9 @@ int falloutMain(int argc, char** argv)
                     }
 
                     char* mapNameCopy = compat_strdup(mapName != nullptr ? mapName : _mainMap);
+                    CTR_LOG("NEW_GAME: calling _main_load_new");
                     _main_load_new(mapNameCopy);
+                    CTR_LOG("NEW_GAME: _main_load_new done");
                     free(mapNameCopy);
 
                     // SFALL: AfterNewGameStartHook.

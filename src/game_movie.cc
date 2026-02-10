@@ -24,6 +24,7 @@
 #ifdef __3DS__
 #include "platform/ctr/ctr_rectmap.h"
 #include "platform/ctr/ctr_input.h"
+#include "platform/ctr/ctr_sys.h"
 #endif
 
 namespace fallout {
@@ -275,10 +276,19 @@ int gameMoviePlay(int movie, int flags)
         v11 |= buttons;
     } while (((v11 & 1) == 0 && (v11 & 2) == 0) || (buttons & 1) != 0 || (buttons & 2) != 0);
 
+#ifdef __3DS__
+    ctr_debug_log("gameMoviePlay: movie loop exited, stopping");
+#endif
     _movieStop();
     _moviefx_stop();
+#ifdef __3DS__
+    ctr_debug_log("gameMoviePlay: calling _movieUpdate");
+#endif
     _movieUpdate();
     paletteSetEntries(gPaletteBlack);
+#ifdef __3DS__
+    ctr_debug_log("gameMoviePlay: palette set to black");
+#endif
 
     gGameMoviesSeen[movie] = 1;
 
@@ -300,12 +310,17 @@ int gameMoviePlay(int movie, int flags)
         float b = (float)(Color2RGB(oldTextColor) & 0x1F) * flt_50352A;
         windowSetTextColor(r, g, b);
     }
-
+#ifdef __3DS__
+    ctr_debug_log("gameMoviePlay: destroying window");
+#endif
     windowDestroy(win);
 
     // CE: Destroying a window redraws only content it was covering (centered
     // 640x480). This leads to everything outside this rect to remain black.
     windowRefreshAll(&_scr_size);
+#ifdef __3DS__
+    ctr_debug_log("gameMoviePlay: windowRefreshAll done");
+#endif
 
     if ((flags & GAME_MOVIE_PAUSE_MUSIC) != 0) {
         backgroundSoundResume();
@@ -322,6 +337,7 @@ int gameMoviePlay(int movie, int flags)
 
 #ifdef __3DS__
     setActiveRectMap(DISPLAY_FULL);
+    ctr_debug_log("gameMoviePlay: complete");
 #endif
     gGameMovieIsPlaying = false;
     return 0;
