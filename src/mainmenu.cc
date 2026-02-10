@@ -375,8 +375,23 @@ int mainMenuWindowHandleEvents()
             }
         }
 
+#ifdef __3DS__
+        if (rc != -1) {
+            ctr_debug_log("mainMenu: rc set, before renderPresent");
+        }
+#endif
         renderPresent();
+#ifdef __3DS__
+        if (rc != -1) {
+            ctr_debug_log("mainMenu: after renderPresent, before throttle");
+        }
+#endif
         sharedFpsLimiter.throttle();
+#ifdef __3DS__
+        if (rc != -1) {
+            ctr_debug_log("mainMenu: after throttle, exiting loop");
+        }
+#endif
     }
 
 #ifdef __3DS__
