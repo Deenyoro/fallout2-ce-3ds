@@ -19,7 +19,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build
-        run: make -f Makefile.ctr -j$(nproc)
+        run: |
+          make -f Makefile.ctr -j$(nproc)
+          ls -la fallout2-ce.3dsx fallout2-ce.cia
 
       - name: Upload build output
         uses: actions/upload-artifact@v4
