@@ -9,7 +9,7 @@
 
 u32 __ctru_heap_size = 0;
 u32 __ctru_linear_heap_size = 25 * 1024 * 1024; // anything lower crashes on launch
-u32 __stacksize__ = 64 * 1024;
+u32 __stacksize__ = 128 * 1024;
 
 #ifdef _DEBUG_LINK
 #include <sys/socket.h>

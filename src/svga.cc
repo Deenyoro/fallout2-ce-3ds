@@ -34,6 +34,10 @@ void (*_scr_blit)(unsigned char* src, int src_pitch, int a3, int src_x, int src_
 // 0x6ACA1C
 void (*_zero_mem)() = nullptr;
 
+#ifdef __3DS__
+static bool gfxFrameDirty = false;
+#endif
+
 SDL_Window* gSdlWindow = nullptr;
 SDL_Surface* gSdlSurface = nullptr;
 SDL_Renderer* gSdlRenderer = nullptr;
@@ -285,7 +289,9 @@ void directDrawSetPaletteInRange(unsigned char* palette, int start, int count)
         }
 
         SDL_SetPaletteColors(gSdlSurface->format->palette, colors, start, count);
-#ifndef __3DS__
+#ifdef __3DS__
+        ctr_gfx_mark_palette_dirty();
+#else
         SDL_BlitSurface(gSdlSurface, nullptr, gSdlTextureSurface, nullptr);
 #endif
     }
@@ -305,7 +311,9 @@ void directDrawSetPalette(unsigned char* palette)
         }
 
         SDL_SetPaletteColors(gSdlSurface->format->palette, colors, 0, 256);
-#ifndef __3DS__
+#ifdef __3DS__
+        ctr_gfx_mark_palette_dirty();
+#else
         SDL_BlitSurface(gSdlSurface, nullptr, gSdlTextureSurface, nullptr);
 #endif
     }
@@ -335,7 +343,10 @@ unsigned char* directDrawGetPalette()
 void _GNW95_ShowRect(unsigned char* src, int srcPitch, int a3, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY)
 {
     blitBufferToBuffer(src + srcPitch * srcY + srcX, srcWidth, srcHeight, srcPitch, (unsigned char*)gSdlSurface->pixels + gSdlSurface->pitch * destY + destX, gSdlSurface->pitch);
-#ifndef __3DS__
+#ifdef __3DS__
+    ctr_gfx_set_dirty_rect(destY, destY + srcHeight);
+    gfxFrameDirty = true;
+#else
     SDL_Rect srcRect;
     srcRect.x = destX;
     srcRect.y = destY;
@@ -454,6 +465,8 @@ void handleWindowSizeChanged()
 void renderPresent()
 {
 #ifdef __3DS__
+    if (!gfxFrameDirty) return;
+    gfxFrameDirty = false;
     ctr_gfx_draw(gSdlSurface);
 #else
     SDL_UpdateTexture(gSdlTexture, nullptr, gSdlTextureSurface->pixels, gSdlTextureSurface->pitch);

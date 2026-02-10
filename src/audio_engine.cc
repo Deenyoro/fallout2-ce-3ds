@@ -83,13 +83,21 @@ static void audioEngineMixin(void* userData, Uint8* stream, int length)
             int pos = 0;
             while (pos < length) {
                 int remaining = length - pos;
-                if (remaining > sizeof(buffer)) {
+                if (remaining > (int)sizeof(buffer)) {
                     remaining = sizeof(buffer);
                 }
 
-                // TODO: Make something better than frame-by-frame convertion.
-                SDL_AudioStreamPut(soundBuffer->stream, (unsigned char*)soundBuffer->data + soundBuffer->pos, srcFrameSize);
-                soundBuffer->pos += srcFrameSize;
+                // Batch-feed multiple source frames to the resampler at once
+                // instead of one frame at a time, reducing call overhead ~64-256x.
+                int batchBytes = remaining;
+                int srcAvail = soundBuffer->size - soundBuffer->pos;
+                if (batchBytes > srcAvail) batchBytes = srcAvail;
+                // Align to frame boundary
+                batchBytes = (batchBytes / srcFrameSize) * srcFrameSize;
+                if (batchBytes < srcFrameSize) batchBytes = srcFrameSize;
+
+                SDL_AudioStreamPut(soundBuffer->stream, (unsigned char*)soundBuffer->data + soundBuffer->pos, batchBytes);
+                soundBuffer->pos += batchBytes;
 
                 int bytesRead = SDL_AudioStreamGet(soundBuffer->stream, buffer, remaining);
                 if (bytesRead == -1) {
