@@ -43,6 +43,7 @@
 
 #ifdef __3DS__
 #include "platform/ctr/ctr_rectmap.h"
+#include "platform/ctr/ctr_sys.h"
 #endif
 
 namespace fallout {
@@ -116,9 +117,13 @@ int falloutMain(int argc, char** argv)
                 gameMoviePlay(MOVIE_CREDITS, 0);
                 break;
             case MAIN_MENU_NEW_GAME:
+#ifdef __3DS__
+                ctr_debug_log("NEW_GAME: start");
+#endif
                 mainMenuWindowHide(true);
                 mainMenuWindowFree();
 #ifdef __3DS__
+                ctr_debug_log("NEW_GAME: menu freed");
                 setActiveRectMap(DISPLAY_CHAR_SELECT);
 #endif
                 if (characterSelectorOpen() == 2) {
