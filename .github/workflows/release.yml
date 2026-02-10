@@ -18,10 +18,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install bannertool
+      - name: Install dependencies
         run: |
           apt-get update -qq
-          apt-get install -y -qq build-essential
+          apt-get install -y -qq build-essential cmake
+          # Build SDL2 for 3DS (not packaged by devkitPro)
+          git clone --depth 1 -b SDL2 https://github.com/libsdl-org/SDL.git /tmp/SDL2
+          cmake -S /tmp/SDL2 -B /tmp/SDL2/build \
+            -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/3DS.cmake \
+            -DCMAKE_INSTALL_PREFIX=$DEVKITPRO/portlibs/3ds \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/SDL2/build -j$(nproc)
+          cmake --install /tmp/SDL2/build
+          # Build bannertool (not included in devkitPro)
           git clone --recursive --depth 1 https://github.com/diasurgical/bannertool.git /tmp/bannertool
           make -C /tmp/bannertool
           cp /tmp/bannertool/output/*/bannertool $DEVKITPRO/tools/bin/
