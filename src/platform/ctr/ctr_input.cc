@@ -8,6 +8,7 @@
 
 #include "platform_compat.h"
 
+#include "kb.h"
 #include "window_manager.h"
 #include "svga.h"
 #include "input.h"
