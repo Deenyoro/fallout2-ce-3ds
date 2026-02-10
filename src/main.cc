@@ -95,18 +95,16 @@ int falloutMain(int argc, char** argv)
     // SFALL: Allow to skip intro movies
     int skipOpeningMovies;
     configGetInt(&gSfallConfig, SFALL_CONFIG_MISC_KEY, SFALL_CONFIG_SKIP_OPENING_MOVIES_KEY, &skipOpeningMovies);
-    CTR_LOG("falloutMain: skipOpeningMovies check");
+#ifdef __3DS__
+    // Skip intro movies on 3DS - MVE playback hangs on this platform
+    CTR_LOG("falloutMain: skipping intro movies on 3DS");
+#else
     if (skipOpeningMovies < 1) {
-        CTR_LOG("falloutMain: playing IPLOGO...");
         gameMoviePlay(MOVIE_IPLOGO, GAME_MOVIE_FADE_IN);
-        CTR_LOG("falloutMain: playing INTRO...");
         gameMoviePlay(MOVIE_INTRO, 0);
-        CTR_LOG("falloutMain: playing CREDITS...");
         gameMoviePlay(MOVIE_CREDITS, 0);
-        CTR_LOG("falloutMain: movies done");
-    } else {
-        CTR_LOG("falloutMain: skipping movies");
     }
+#endif
 
     CTR_LOG("falloutMain: calling mainMenuWindowInit");
     if (mainMenuWindowInit() == 0) {
@@ -130,8 +128,10 @@ int falloutMain(int argc, char** argv)
             switch (mainMenuRc) {
             case MAIN_MENU_INTRO:
                 mainMenuWindowHide(true);
+#ifndef __3DS__
                 gameMoviePlay(MOVIE_INTRO, GAME_MOVIE_STOP_MUSIC);
                 gameMoviePlay(MOVIE_CREDITS, 0);
+#endif
                 break;
             case MAIN_MENU_NEW_GAME:
 #ifdef __3DS__
@@ -144,7 +144,9 @@ int falloutMain(int argc, char** argv)
                 setActiveRectMap(DISPLAY_CHAR_SELECT);
 #endif
                 if (characterSelectorOpen() == 2) {
+#ifndef __3DS__
                     gameMoviePlay(MOVIE_ELDER, GAME_MOVIE_STOP_MUSIC);
+#endif
                     randomSeedPrerandom(-1);
 
                     // SFALL: Override starting map.
@@ -228,7 +230,9 @@ int falloutMain(int argc, char** argv)
                 // FALLTHROUGH
             case MAIN_MENU_SCREENSAVER:
                 mainMenuWindowHide(true);
+#ifndef __3DS__
                 gameMoviePlay(MOVIE_INTRO, GAME_MOVIE_PAUSE_MUSIC);
+#endif
                 break;
             case MAIN_MENU_OPTIONS:
                 mainMenuWindowHide(true);
