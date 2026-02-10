@@ -64,27 +64,34 @@ int main(int argc, char* argv[])
 #endif
     osSetSpeedupEnable(true);
 
+    const char* basepath = "sdmc:/3ds/fallout2/";
+    chdir(basepath);
+
+    ctr_debug_log("=== Fallout 2 CE 3DS startup ===");
+    ctr_debug_log("chdir done");
+
     linearHeapAvailableAtStart = ctr_sys_check_linear_heap();
     heapAvailableAtStart = ctr_sys_check_heap();
+    ctr_debug_log("heap checks done");
 
     SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
-
-    const char* basepath = "sdmc:/3ds/fallout2/";
-    chdir(basepath);
+    ctr_debug_log("SDL hints set");
 #endif
 
 #ifndef __3DS__
     if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
         return EXIT_FAILURE;
     }
-#endif
-
     atexit(SDL_Quit);
+#endif
 
     SDL_ShowCursor(SDL_DISABLE);
 
     gProgramIsActive = true;
+#ifdef __3DS__
+    ctr_debug_log("calling falloutMain");
+#endif
     rc = falloutMain(argc, argv);
 
 #if _WIN32
