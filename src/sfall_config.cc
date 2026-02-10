@@ -68,12 +68,14 @@ bool sfallConfigInit(int argc, char** argv)
     configSetInt(&gSfallConfig, SFALL_CONFIG_MISC_KEY, SFALL_CONFIG_PIPBOY_AVAILABLE_AT_GAMESTART, 0);
 
     char path[COMPAT_MAX_PATH];
-    char* executable = argv[0];
-    char* ch = strrchr(executable, '\\');
+    char* executable = (argc > 0 && argv != nullptr) ? argv[0] : nullptr;
+    char* ch = (executable != nullptr) ? strrchr(executable, '\\') : nullptr;
 #ifndef _WIN32
-    char* fch = strrchr(executable, '/');
-    if (fch != nullptr && (ch == nullptr || fch > ch)) {
-        ch = fch;
+    if (executable != nullptr) {
+        char* fch = strrchr(executable, '/');
+        if (fch != nullptr && (ch == nullptr || fch > ch)) {
+            ch = fch;
+        }
     }
 #endif
     if (ch != nullptr) {
