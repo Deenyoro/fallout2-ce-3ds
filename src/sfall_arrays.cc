@@ -13,12 +13,20 @@
 #include "interpreter.h"
 #include "sfall_lists.h"
 
+#ifdef __3DS__
+#include <3ds.h>
+#endif
+
 namespace fallout {
 
 static constexpr ArrayId kInitialArrayId = 1;
 
 #define ARRAY_MAX_STRING (255) // maximum length of string to be stored as array key or value
+#ifdef __3DS__
+#define ARRAY_MAX_SIZE (10000) // reduced for 3DS memory constraints
+#else
 #define ARRAY_MAX_SIZE (100000) // maximum number of array elements,
+#endif
 
 // special actions for arrays using array_resize operator
 #define ARRAY_ACTION_SORT (-2)
@@ -40,10 +48,16 @@ static void ListSort(std::vector<T>& arr, int type, Compare cmp)
         std::reverse(arr.rbegin(), arr.rend());
         break;
     case ARRAY_ACTION_SHUFFLE: // shuffle elements
+    {
+#ifdef __3DS__
+        std::mt19937 g(svcGetSystemTick());
+#else
         std::random_device rd;
         std::mt19937 g(rd());
+#endif
         std::shuffle(arr.begin(), arr.end(), g);
         break;
+    }
     }
 }
 

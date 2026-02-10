@@ -21,6 +21,10 @@
 #include "tile.h"
 #include "window_manager.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define OPTIONS_WINDOW_BUTTONS_COUNT (10)
@@ -95,8 +99,15 @@ int showOptions()
         return -1;
     }
 
+#ifdef __3DS__
+    setPreviousRectMap(0);
+#endif
     int rc = -1;
     while (rc == -1) {
+#ifdef __3DS__
+        if (ctr_rectMap.active != DISPLAY_PAUSE)
+            setActiveRectMap(DISPLAY_PAUSE);
+#endif
         sharedFpsLimiter.mark();
 
         int keyCode = inputGetInput();
@@ -116,6 +127,9 @@ int showOptions()
             case KEY_UPPERCASE_S:
             case KEY_LOWERCASE_S:
             case 500:
+#ifdef __3DS__
+                setActiveRectMap(DISPLAY_FULL);
+#endif
                 if (lsgSaveGame(LOAD_SAVE_MODE_NORMAL) == 1) {
                     rc = 1;
                 }
@@ -123,6 +137,9 @@ int showOptions()
             case KEY_UPPERCASE_L:
             case KEY_LOWERCASE_L:
             case 501:
+#ifdef __3DS__
+                setActiveRectMap(DISPLAY_FULL);
+#endif
                 if (lsgLoadGame(LOAD_SAVE_MODE_NORMAL) == 1) {
                     rc = 1;
                 }
@@ -133,6 +150,9 @@ int showOptions()
                 // FALLTHROUGH
             case 502:
                 // PREFERENCES
+#ifdef __3DS__
+                setActiveRectMap(DISPLAY_FULL);
+#endif
                 doPreferences(false);
                 break;
             case KEY_PLUS:
@@ -161,6 +181,9 @@ int showOptions()
         sharedFpsLimiter.throttle();
     }
 
+#ifdef __3DS__
+    setActiveRectMap(DISPLAY_GUI);
+#endif
     optionsWindowFree();
 
     return rc;

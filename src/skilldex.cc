@@ -25,6 +25,10 @@
 #include "text_font.h"
 #include "window_manager.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define SKILLDEX_WINDOW_RIGHT_MARGIN 4

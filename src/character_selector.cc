@@ -34,6 +34,10 @@
 #include "trait.h"
 #include "window_manager.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_rectmap.h"
+#endif
+
 namespace fallout {
 
 #define CS_WINDOW_WIDTH (640)
@@ -62,10 +66,17 @@ namespace fallout {
 #define CS_WINDOW_BACK_BUTTON_X (461)
 #define CS_WINDOW_BACK_BUTTON_Y (425)
 
+#ifdef __3DS__
+#define CS_WINDOW_NAME_MID_X (128)
+#define CS_WINDOW_PRIMARY_STAT_MID_X (148)
+#define CS_WINDOW_SECONDARY_STAT_MID_X (129)
+#define CS_WINDOW_BIO_X (220)
+#else
 #define CS_WINDOW_NAME_MID_X (318)
 #define CS_WINDOW_PRIMARY_STAT_MID_X (362)
 #define CS_WINDOW_SECONDARY_STAT_MID_X (379)
 #define CS_WINDOW_BIO_X (438)
+#endif
 
 typedef enum PremadeCharacter {
     PREMADE_CHARACTER_NARG,
@@ -162,6 +173,11 @@ int characterSelectorOpen()
 
     int rc = 0;
     bool done = false;
+
+#ifdef __3DS__
+    setActiveRectMap(DISPLAY_CHAR_SELECT);
+#endif
+
     while (!done) {
         sharedFpsLimiter.mark();
 
@@ -244,7 +260,9 @@ int characterSelectorOpen()
         sharedFpsLimiter.throttle();
     }
 
+#ifndef __3DS__
     paletteFadeTo(gPaletteBlack);
+#endif
     characterSelectorWindowFree();
 
     if (cursorWasHidden) {
@@ -290,12 +308,32 @@ static bool characterSelectorWindowInit()
     if (gCharacterSelectorBackground == nullptr)
         return characterSelectorWindowFatalError(false);
 
+#ifdef __3DS__
+    blitBufferToBufferStretchTrans(backgroundFrmImage.getData(),
+        CS_WINDOW_WIDTH,
+        290,
+        CS_WINDOW_WIDTH,
+        gCharacterSelectorWindowBuffer,
+        400,
+        240,
+        CS_WINDOW_WIDTH);
+
+    blitBufferToBufferStretchTrans(backgroundFrmImage.getData() + CS_WINDOW_WIDTH * CS_WINDOW_BACKGROUND_Y + CS_WINDOW_BACKGROUND_X,
+        CS_WINDOW_BACKGROUND_WIDTH,
+        CS_WINDOW_BACKGROUND_HEIGHT,
+        CS_WINDOW_WIDTH,
+        gCharacterSelectorBackground,
+        350,
+        240,
+        CS_WINDOW_BACKGROUND_WIDTH);
+#else
     blitBufferToBuffer(backgroundFrmImage.getData() + CS_WINDOW_WIDTH * CS_WINDOW_BACKGROUND_Y + CS_WINDOW_BACKGROUND_X,
         CS_WINDOW_BACKGROUND_WIDTH,
         CS_WINDOW_BACKGROUND_HEIGHT,
         CS_WINDOW_WIDTH,
         gCharacterSelectorBackground,
         CS_WINDOW_BACKGROUND_WIDTH);
+#endif
 
     backgroundFrmImage.unlock();
 
@@ -567,12 +605,23 @@ static bool characterSelectorWindowRefresh()
         return false;
     }
 
+#ifdef __3DS__
+    blitBufferToBufferStretchTrans(gCharacterSelectorBackground,
+        350,
+        240,
+        CS_WINDOW_BACKGROUND_WIDTH,
+        gCharacterSelectorWindowBuffer + CS_WINDOW_WIDTH * CS_WINDOW_BACKGROUND_Y + (CS_WINDOW_BACKGROUND_X-15),
+        350,
+        240,
+        CS_WINDOW_WIDTH);
+#else
     blitBufferToBuffer(gCharacterSelectorBackground,
         CS_WINDOW_BACKGROUND_WIDTH,
         CS_WINDOW_BACKGROUND_HEIGHT,
         CS_WINDOW_BACKGROUND_WIDTH,
         gCharacterSelectorWindowBuffer + CS_WINDOW_WIDTH * CS_WINDOW_BACKGROUND_Y + CS_WINDOW_BACKGROUND_X,
         CS_WINDOW_WIDTH);
+#endif
 
     bool success = false;
     if (characterSelectorWindowRenderFace()) {
@@ -598,7 +647,18 @@ static bool characterSelectorWindowRenderFace()
         if (data != nullptr) {
             int width = faceFrmImage.getWidth();
             int height = faceFrmImage.getHeight();
+#ifdef __3DS__
+            blitBufferToBufferStretchTrans(data,
+                width,
+                height,
+                width,
+                gCharacterSelectorWindowBuffer + CS_WINDOW_WIDTH * (215 - height) + 135 - (width / 2),
+                40,
+                40,
+                CS_WINDOW_WIDTH);
+#else
             blitBufferToBufferTrans(data, width, height, width, (gCharacterSelectorWindowBuffer + CS_WINDOW_WIDTH * 23 + 27), CS_WINDOW_WIDTH);
+#endif
             success = true;
         }
         faceFrmImage.unlock();
@@ -623,6 +683,9 @@ static bool characterSelectorWindowRenderStats()
 
     int vh = fontGetLineHeight();
     int y = 40;
+#ifdef __3DS__
+    vh -= 2;
+#endif
 
     // NAME
     str = objectGetName(gDude);
@@ -873,10 +936,19 @@ static bool characterSelectorWindowRenderBio()
     if (stream != nullptr) {
         int y = 40;
         int lineHeight = fontGetLineHeight();
+#ifdef __3DS__
+        lineHeight -= 2;
+#endif
 
         char string[256];
         while (fileReadString(string, 256, stream) && y < 260) {
-            fontDrawText(gCharacterSelectorWindowBuffer + CS_WINDOW_WIDTH * y + CS_WINDOW_BIO_X, string, CS_WINDOW_WIDTH - CS_WINDOW_BIO_X, CS_WINDOW_WIDTH, _colorTable[992]);
+            fontDrawText(gCharacterSelectorWindowBuffer + CS_WINDOW_WIDTH * y + CS_WINDOW_BIO_X, string,
+#ifdef __3DS__
+                CS_WINDOW_WIDTH - CS_WINDOW_BIO_X + 130,
+#else
+                CS_WINDOW_WIDTH - CS_WINDOW_BIO_X,
+#endif
+                CS_WINDOW_WIDTH, _colorTable[992]);
             y += lineHeight;
         }
 
