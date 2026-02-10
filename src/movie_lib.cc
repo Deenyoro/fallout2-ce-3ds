@@ -754,6 +754,15 @@ LABEL_5:
                 ++rm_FrameDropCount;
             }
 
+#ifdef __3DS__
+            if (rm_FrameCount % 30 == 0) {
+                char buf[128];
+                snprintf(buf, sizeof(buf), "mve: frame=%d dropped=%d late=%d",
+                    rm_FrameCount, rm_FrameDropCount, sync_late);
+                ctr_debug_log(buf);
+            }
+#endif
+
             v20 = v1[1];
             if (v20 && !v21) {
                 palSetPalette(v1[0], v20);
@@ -830,6 +839,20 @@ static int syncInit(int rate, int resolution)
         sync_wait_quanta = quanta;
         syncReset(quanta);
     }
+
+#ifdef __3DS__
+    {
+        char buf[128];
+        int fps_x100 = 0;
+        if (rate > 0 && resolution > 0) {
+            // rate*resolution = microseconds per frame
+            fps_x100 = 100000000 / (rate * resolution);
+        }
+        snprintf(buf, sizeof(buf), "syncInit: rate=%d res=%d quanta=%d fps=%d.%02d",
+            rate, resolution, quanta, fps_x100 / 100, fps_x100 % 100);
+        ctr_debug_log(buf);
+    }
+#endif
 
     return 1;
 }
@@ -925,10 +948,10 @@ static void _MVE_sndSync()
         sndSyncFrameCount++;
         unsigned int elapsed = compat_timeGetTime() - sndSyncStart;
         sndSyncTotalTime += elapsed;
-        if (sndSyncFrameCount == 30) {
+        if (sndSyncFrameCount == 15) {
             char buf[128];
-            snprintf(buf, sizeof(buf), "sndSync(noaud): avg=%ums syncWait=%ums late=%d",
-                sndSyncTotalTime / 30, (sndSyncAfterWait - sndSyncStart), sync_late);
+            snprintf(buf, sizeof(buf), "sndSync15f: avg=%ums wait=%ums late=%d",
+                sndSyncTotalTime / 15, (sndSyncAfterWait - sndSyncStart), sync_late);
             ctr_debug_log(buf);
             sndSyncFrameCount = 0;
             sndSyncTotalTime = 0;

@@ -498,14 +498,10 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
 
     C3D_BindProgram(&program);
 
-    uLoc_projection = shaderInstanceGetUniformLocation(program.vertexShader, "projection");
     C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
     AttrInfo_Init(attrInfo);
     AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 3); // v0=position
     AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 2); // v1=texcoord
-
-    Mtx_OrthoTilt(&topProjection, 0, ctr_gfx.isWide ? GSP_SCREEN_HEIGHT_TOP_2X : GSP_SCREEN_HEIGHT_TOP, 0, GSP_SCREEN_WIDTH, 0.1f, 1.f, true);
-    Mtx_OrthoTilt(&bottomProjection, 0, GSP_SCREEN_HEIGHT_BOTTOM, 0, GSP_SCREEN_WIDTH, 0.1f, 1.f, true);
 
     Uint8* dst = (Uint8*)renderTextureData;
     Uint8* src = (Uint8*)gSdlSurface->pixels;
@@ -519,16 +515,12 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
     int endY = surfaceHeight;
 
     // During movie playback, only convert the movie area rows
-    // Movie frames are centered in the 640x480 window, typically ~320 rows tall
-    // The render texture is persistent so unchanged rows retain previous values
     if (ctr_rectMap.active == DISPLAY_MOVIE) {
-        // Use the DISPLAY_MOVIE source rect to determine which rows matter
         if (numRectsInMap[DISPLAY_MOVIE] > 0) {
             startY = rectMaps[DISPLAY_MOVIE][0]->src_y;
             endY = startY + rectMaps[DISPLAY_MOVIE][0]->src_h;
             if (endY > surfaceHeight) endY = surfaceHeight;
             if (startY < 0) startY = 0;
-            // Also include the subtitle area from DISPLAY_MOVIE_SUB
             if (numRectsInMap[DISPLAY_MOVIE_SUB] > 0) {
                 int subEnd = rectMaps[DISPLAY_MOVIE_SUB][0]->src_y + rectMaps[DISPLAY_MOVIE_SUB][0]->src_h;
                 if (subEnd > endY && subEnd <= surfaceHeight) endY = subEnd;
@@ -536,7 +528,6 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
         }
     }
 
-    // Update BGR lookup table if palette changed
     updateBgrPalette(palette);
 
     for (int y = startY; y < endY; y++) {
@@ -565,7 +556,14 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
 
     u64 tAfterConvert = osGetTime();
 
-    GSPGPU_FlushDataCache(renderTextureData, renderTextureByteCount);
+    // Partial cache flush: only flush modified rows during movie playback
+    if (startY > 0 || endY < (int)renderTextureHeight) {
+        uint32_t flushOffset = startY * renderTextureStride;
+        uint32_t flushSize = (endY - startY) * renderTextureStride;
+        GSPGPU_FlushDataCache(renderTextureData + flushOffset, flushSize);
+    } else {
+        GSPGPU_FlushDataCache(renderTextureData, renderTextureByteCount);
+    }
 
     C3D_SyncDisplayTransfer((u32*)renderTextureData, GX_BUFFER_DIM(renderTextureWidth, renderTextureHeight),
             (u32*)render_tex.data, GX_BUFFER_DIM(renderTextureWidth, renderTextureHeight), TEXTURE_TRANSFER_FLAGS);
@@ -588,9 +586,9 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
     gfxTotalDraw += (tAfterDraw - tAfterTransfer);
     gfxFrameCount++;
 
-    if (gfxFrameCount == 60) {
+    if (gfxFrameCount == 15) {
         char buf[128];
-        snprintf(buf, sizeof(buf), "gfx60f: conv=%lums xfer=%lums draw=%lums rows=%d-%d",
+        snprintf(buf, sizeof(buf), "gfx15f: conv=%lums xfer=%lums draw=%lums rows=%d-%d",
             (unsigned long)gfxTotalConvert, (unsigned long)gfxTotalTransfer, (unsigned long)gfxTotalDraw, startY, endY);
         ctr_debug_log(buf);
         gfxFrameCount = 0;
