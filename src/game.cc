@@ -63,6 +63,9 @@
 
 #ifdef __3DS__
 #include "platform/ctr/ctr_sys.h"
+#define CTR_LOG(msg) ctr_debug_log(msg)
+#else
+#define CTR_LOG(msg) ((void)0)
 #endif
 #include "text_font.h"
 #include "tile.h"
@@ -190,7 +193,9 @@ int gameInitWithOptions(const char* windowTitle, bool isMapper, int font, int a4
     ctr_debug_log("gameInitWithOptions: _initWindow done");
 #endif
 
+    CTR_LOG("gameInit: paletteInit...");
     paletteInit();
+    CTR_LOG("gameInit: paletteInit done");
 
     const char* language = settings.system.language.c_str();
     if (compat_stricmp(language, FRENCH) == 0) {
@@ -208,7 +213,9 @@ int gameInitWithOptions(const char* windowTitle, bool isMapper, int font, int a4
     configGetInt(&gSfallConfig, SFALL_CONFIG_MISC_KEY, SFALL_CONFIG_SKIP_OPENING_MOVIES_KEY, &skipOpeningMovies);
 
     if (!gIsMapper && skipOpeningMovies < 2) {
+        CTR_LOG("gameInit: showSplash...");
         showSplash();
+        CTR_LOG("gameInit: showSplash done");
     }
 
     // CE: Handle debug mode (exactly as seen in `mapper2.exe`).
@@ -225,6 +232,7 @@ int gameInitWithOptions(const char* windowTitle, bool isMapper, int font, int a4
         _debug_register_func(_win_debug);
     }
 
+    CTR_LOG("gameInit: interfaceFontsInit...");
     interfaceFontsInit();
     fontManagerAdd(&gModernFontManager);
     fontSetCurrent(font);
@@ -237,6 +245,7 @@ int gameInitWithOptions(const char* windowTitle, bool isMapper, int font, int a4
     badwordsInit();
     skillsInit();
     statsInit();
+    CTR_LOG("gameInit: basic inits done");
 
     if (partyMembersInit() != 0) {
         debugPrint("Failed on partyMember_init\n");
@@ -251,9 +260,11 @@ int gameInitWithOptions(const char* windowTitle, bool isMapper, int font, int a4
     aiInit();
     _inven_reset_dude();
 
+    CTR_LOG("gameInit: gameSoundInit...");
     if (gameSoundInit() != 0) {
         debugPrint("Sound initialization failed.\n");
     }
+    CTR_LOG("gameInit: gameSoundInit done");
 
     debugPrint(">gsound_init\t");
 
@@ -274,10 +285,12 @@ int gameInitWithOptions(const char* windowTitle, bool isMapper, int font, int a4
 
     debugPrint(">moviefx_init\t");
 
+    CTR_LOG("gameInit: isoInit...");
     if (isoInit() != 0) {
         debugPrint("Failed on iso_init\n");
         return -1;
     }
+    CTR_LOG("gameInit: isoInit done");
 
     debugPrint(">iso_init\t");
 
@@ -288,10 +301,12 @@ int gameInitWithOptions(const char* windowTitle, bool isMapper, int font, int a4
 
     debugPrint(">gmouse_init\t");
 
+    CTR_LOG("gameInit: protoInit...");
     if (protoInit() != 0) {
         debugPrint("Failed on proto_init\n");
         return -1;
     }
+    CTR_LOG("gameInit: protoInit done");
 
     debugPrint(">proto_init\t");
 
@@ -319,10 +334,12 @@ int gameInitWithOptions(const char* windowTitle, bool isMapper, int font, int a4
 
     debugPrint(">scr_game_init\t");
 
+    CTR_LOG("gameInit: wmWorldMap_init...");
     if (wmWorldMap_init() != 0) {
         debugPrint("Failed on wmWorldMap_init\n");
         return -1;
     }
+    CTR_LOG("gameInit: wmWorldMap_init done");
 
     debugPrint(">wmWorldMap_init\t");
 
@@ -423,6 +440,7 @@ int gameInitWithOptions(const char* windowTitle, bool isMapper, int font, int a4
 
     messageListRepositorySetStandardMessageList(STANDARD_MESSAGE_LIST_MISC, &gMiscMessageList);
 
+    CTR_LOG("gameInit: COMPLETE");
     return 0;
 }
 
