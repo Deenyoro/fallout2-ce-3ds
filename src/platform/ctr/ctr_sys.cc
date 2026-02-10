@@ -74,6 +74,17 @@ size_t ctr_sys_check_heap() {
 
     return allocatedChunks * chunkSize;
 }
+static bool debugLogStarted = false;
+
+void ctr_debug_log(const char* msg) {
+    FILE* f = fopen("sdmc:/3ds/fallout2/debug.log", debugLogStarted ? "a" : "w");
+    debugLogStarted = true;
+    if (f) {
+        fprintf(f, "%s\n", msg);
+        fclose(f);
+    }
+}
+
 #ifdef _DEBUG_OVERLAY
 float ctr_sys_get_fps()
 {
