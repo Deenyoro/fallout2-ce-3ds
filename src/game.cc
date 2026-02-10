@@ -60,6 +60,10 @@
 #include "skilldex.h"
 #include "stat.h"
 #include "svga.h"
+
+#ifdef __3DS__
+#include "platform/ctr/ctr_sys.h"
+#endif
 #include "text_font.h"
 #include "tile.h"
 #include "trait.h"
@@ -129,30 +133,63 @@ int gameInitWithOptions(const char* windowTitle, bool isMapper, int font, int a4
 {
     char path[COMPAT_MAX_PATH];
 
+#ifdef __3DS__
+    ctr_debug_log("gameInitWithOptions: start");
+#endif
+
     if (gameMemoryInit() == -1) {
         return -1;
     }
+
+#ifdef __3DS__
+    ctr_debug_log("gameInitWithOptions: gameMemoryInit done");
+#endif
 
     // Sfall config should be initialized before game config, since it can
     // override it's file name.
     sfallConfigInit(argc, argv);
 
+#ifdef __3DS__
+    ctr_debug_log("gameInitWithOptions: sfallConfigInit done");
+#endif
+
     settingsInit(isMapper, argc, argv);
+
+#ifdef __3DS__
+    ctr_debug_log("gameInitWithOptions: settingsInit done");
+#endif
 
     gIsMapper = isMapper;
 
     if (gameDbInit() == -1) {
+#ifdef __3DS__
+        ctr_debug_log("gameInitWithOptions: gameDbInit FAILED");
+#endif
         settingsExit(false);
         sfallConfigExit();
         return -1;
     }
+
+#ifdef __3DS__
+    ctr_debug_log("gameInitWithOptions: gameDbInit done");
+#endif
 
     // Message list repository is considered a specialized file manager, so
     // it should be initialized early in the process.
     messageListRepositoryInit();
 
     programWindowSetTitle(windowTitle);
+
+#ifdef __3DS__
+    ctr_debug_log("gameInitWithOptions: calling _initWindow");
+#endif
+
     _initWindow(1, a4);
+
+#ifdef __3DS__
+    ctr_debug_log("gameInitWithOptions: _initWindow done");
+#endif
+
     paletteInit();
 
     const char* language = settings.system.language.c_str();
