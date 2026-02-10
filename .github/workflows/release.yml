@@ -18,6 +18,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install bannertool
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq build-essential
+          git clone --recursive --depth 1 https://github.com/Steveice10/bannertool.git /tmp/bannertool
+          make -C /tmp/bannertool
+          cp /tmp/bannertool/output/linux-x86_64/bannertool $DEVKITPRO/tools/bin/
+
       - name: Build
         run: |
           make -f Makefile.ctr -j$(nproc)
