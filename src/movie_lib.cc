@@ -809,12 +809,44 @@ LABEL_5:
                 break;
             }
 
+#ifdef __3DS__
+            // Skip both swap and decode if this frame will be dropped.
+            // sync_late is set by case 4 (_MVE_sndSync) before we reach case 17.
+            // Skipping both swap+decode preserves correct reference frame ordering:
+            // the next decoded frame will still reference the last decoded frame.
+            if (sync_late && !sync_FrameDropped) {
+                continue;
+            }
+#endif
+
             // swap movie surfaces
             if (v1[6] & 0x01) {
                 movieSwapSurfaces();
             }
 
+#ifdef __3DS__
+            {
+                static u64 decodeTotalTime = 0;
+                static int decodeFrameCount = 0;
+                u64 decodeStart = osGetTime();
+                _nfPkDecomp((unsigned char*)v3, (unsigned char*)&v1[7], v1[2], v1[3], v1[4], v1[5]);
+                u64 decodeEnd = osGetTime();
+                decodeTotalTime += (decodeEnd - decodeStart);
+                decodeFrameCount++;
+                if (decodeFrameCount == 15) {
+                    char buf[128];
+                    snprintf(buf, sizeof(buf), "decode15f: %lums (avg %lums/f) nf=%dx%d",
+                        (unsigned long)decodeTotalTime,
+                        (unsigned long)(decodeTotalTime / 15),
+                        nf_width, nf_height);
+                    ctr_debug_log(buf);
+                    decodeTotalTime = 0;
+                    decodeFrameCount = 0;
+                }
+            }
+#else
             _nfPkDecomp((unsigned char*)v3, (unsigned char*)&v1[7], v1[2], v1[3], v1[4], v1[5]);
+#endif
 
             continue;
         default:
