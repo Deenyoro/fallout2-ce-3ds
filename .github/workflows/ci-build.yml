@@ -19,7 +19,6 @@ jobs:
 
       - name: Build
         run: |
-          make deps
           make -f Makefile.ctr -j$(nproc)
 
       - name: Upload artifacts
