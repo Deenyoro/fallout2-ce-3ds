@@ -44,6 +44,9 @@
 #ifdef __3DS__
 #include "platform/ctr/ctr_rectmap.h"
 #include "platform/ctr/ctr_sys.h"
+#define CTR_LOG(msg) ctr_debug_log(msg)
+#else
+#define CTR_LOG(msg) ((void)0)
 #endif
 
 namespace fallout {
@@ -82,9 +85,12 @@ int falloutMain(int argc, char** argv)
         return 1;
     }
 
+    CTR_LOG("falloutMain: calling falloutInit");
     if (!falloutInit(argc, argv)) {
+        CTR_LOG("falloutMain: falloutInit FAILED");
         return 1;
     }
+    CTR_LOG("falloutMain: falloutInit done");
 
     // SFALL: Allow to skip intro movies
     int skipOpeningMovies;
@@ -95,7 +101,9 @@ int falloutMain(int argc, char** argv)
         gameMoviePlay(MOVIE_CREDITS, 0);
     }
 
+    CTR_LOG("falloutMain: calling mainMenuWindowInit");
     if (mainMenuWindowInit() == 0) {
+        CTR_LOG("falloutMain: mainMenuWindowInit done, entering loop");
         bool done = false;
         while (!done) {
 #ifdef __3DS__
@@ -107,7 +115,9 @@ int falloutMain(int argc, char** argv)
             mainMenuWindowUnhide(1);
 
             mouseShowCursor();
+            CTR_LOG("falloutMain: calling mainMenuWindowHandleEvents");
             int mainMenuRc = mainMenuWindowHandleEvents();
+            CTR_LOG("falloutMain: mainMenuWindowHandleEvents returned");
             mouseHideCursor();
 
             switch (mainMenuRc) {
