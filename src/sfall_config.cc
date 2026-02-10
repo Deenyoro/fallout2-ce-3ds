@@ -5,6 +5,10 @@
 
 #include "platform_compat.h"
 
+#ifdef __3DS__
+#include "platform/ctr/ctr_sys.h"
+#endif
+
 namespace fallout {
 
 #define SFALL_CONFIG_FILE_NAME "ddraw.ini"
@@ -14,13 +18,24 @@ Config gSfallConfig;
 
 bool sfallConfigInit(int argc, char** argv)
 {
+#ifdef __3DS__
+    ctr_debug_log("sfallConfigInit: enter");
+#endif
+
     if (gSfallConfigInitialized) {
         return false;
     }
 
     if (!configInit(&gSfallConfig)) {
+#ifdef __3DS__
+        ctr_debug_log("sfallConfigInit: configInit failed");
+#endif
         return false;
     }
+
+#ifdef __3DS__
+    ctr_debug_log("sfallConfigInit: configInit done");
+#endif
 
     // Initialize defaults.
     configSetString(&gSfallConfig, SFALL_CONFIG_MISC_KEY, SFALL_CONFIG_DUDE_NATIVE_LOOK_JUMPSUIT_MALE_KEY, "");
@@ -67,6 +82,10 @@ bool sfallConfigInit(int argc, char** argv)
 
     configSetInt(&gSfallConfig, SFALL_CONFIG_MISC_KEY, SFALL_CONFIG_PIPBOY_AVAILABLE_AT_GAMESTART, 0);
 
+#ifdef __3DS__
+    ctr_debug_log("sfallConfigInit: defaults set");
+#endif
+
     char path[COMPAT_MAX_PATH];
     char* executable = (argc > 0 && argv != nullptr) ? argv[0] : nullptr;
     char* ch = (executable != nullptr) ? strrchr(executable, '\\') : nullptr;
@@ -87,9 +106,21 @@ bool sfallConfigInit(int argc, char** argv)
         strcpy(path, SFALL_CONFIG_FILE_NAME);
     }
 
+#ifdef __3DS__
+    ctr_debug_log("sfallConfigInit: path resolved");
+#endif
+
     configRead(&gSfallConfig, path, false);
 
+#ifdef __3DS__
+    ctr_debug_log("sfallConfigInit: configRead done");
+#endif
+
     configParseCommandLineArguments(&gSfallConfig, argc, argv);
+
+#ifdef __3DS__
+    ctr_debug_log("sfallConfigInit: complete");
+#endif
 
     gSfallConfigInitialized = true;
 
