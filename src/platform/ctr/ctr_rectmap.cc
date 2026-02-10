@@ -255,7 +255,7 @@ void ctr_rectmap_init()
     addRectMap(DISPLAY_FIELD,             0,   0,   0, 400, 240,   0,   0, 400, 240);
     addRectMap(DISPLAY_MOVIE,             0, 105,  80, 430, 320,  40,   0, 320, 240);
     addRectMap(DISPLAY_MOVIE_SUB,         0, 105, 401, 430,  80,   0,  60, 320, 120);
-    addRectMap(DISPLAY_MAIN,              0, 400,  25, 215, 230,  43,   0, 234, 240);
+    addRectMap(DISPLAY_MAIN,              0,  25,  15, 230, 260,  43,   0, 234, 240);
 
     addRectMap(DISPLAY_GUI,               0,   5, 380, 200, 100,   0, 100, 200, 100); // monitor
     addRectMap(DISPLAY_GUI,               1, 520, 380, 140, 100, 200, 100, 140, 100); // skill pip
