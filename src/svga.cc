@@ -17,6 +17,7 @@
 #ifdef __3DS__
 #include "platform/ctr/ctr_gfx.h"
 #include "platform/ctr/ctr_rectmap.h"
+#include "platform/ctr/ctr_sys.h"
 #endif
 
 namespace fallout {
@@ -178,12 +179,21 @@ int _init_vesa_mode(int width, int height)
 int _GNW95_init_window(int width, int height, bool fullscreen, int scale)
 {
 #ifdef __3DS__
-    if((SDL_Init(SDL_INIT_VIDEO)==-1)) {
+    ctr_debug_log("_GNW95_init_window: calling SDL_Init(VIDEO)");
+    if ((SDL_Init(SDL_INIT_VIDEO) == -1)) {
+        ctr_debug_log("_GNW95_init_window: SDL_Init FAILED");
         showMesageBox("Could not initialize SDL\n");
+        return -1;
     }
+    ctr_debug_log("_GNW95_init_window: SDL_Init done");
 
+    ctr_debug_log("_GNW95_init_window: calling ctr_gfx_init");
     ctr_gfx_init();
+    ctr_debug_log("_GNW95_init_window: ctr_gfx_init done");
+
+    ctr_debug_log("_GNW95_init_window: calling ctr_rectmap_init");
     ctr_rectmap_init();
+    ctr_debug_log("_GNW95_init_window: ctr_rectmap_init done");
 #else
     if (gSdlWindow == nullptr) {
         SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
@@ -230,6 +240,12 @@ int directDrawInit(int width, int height, int bpp)
     }
 
     gSdlSurface = SDL_CreateRGBSurface(0, width, height, bpp, 0, 0, 0, 0);
+    if (gSdlSurface == nullptr) {
+#ifdef __3DS__
+        ctr_debug_log("directDrawInit: SDL_CreateRGBSurface FAILED");
+#endif
+        return -1;
+    }
 
     SDL_Color colors[256];
     for (int index = 0; index < 256; index++) {

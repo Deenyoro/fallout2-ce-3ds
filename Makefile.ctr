@@ -51,7 +51,7 @@ EXCLUDE_SOURCES := src/mapper
 
 APP_TITLE           := Fallout 2
 APP_DESCRIPTION     := Fallout2-ce port for 3DS
-APP_AUTHOR          := MrHuu
+APP_AUTHOR          := Deenyoro
 
 APP_PRODUCT_CODE    := CTR-P-FLLOT2
 APP_UNIQUE_ID       := 0xDA3A5
