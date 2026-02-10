@@ -19,6 +19,8 @@ size_t ctr_sys_check_heap();
 float ctr_sys_get_fps();
 #endif
 
+void ctr_debug_log(const char* msg);
+
 #ifdef _DEBUG_LINK
 void ctr_sys_3dslink_stdio();
 #endif

@@ -574,6 +574,11 @@ void finishRender()
 void initTransferTexture()
 {
     renderTextureData = (uint8_t *)linearAlloc(renderTextureByteCount);
+    if (renderTextureData == nullptr) {
+        ctr_debug_log("initTransferTexture: linearAlloc FAILED");
+        showMesageBox("Failed to allocate render texture\n");
+        exit(EXIT_FAILURE);
+    }
 
     memset(renderTextureData, 0, renderTextureByteCount);
 
@@ -604,15 +609,21 @@ void ctr_gfx_reinit()
 
 void ctr_gfx_init()
 {
-    if(gspHasGpuRight())
+    ctr_debug_log("ctr_gfx_init: start");
+
+    if(gspHasGpuRight()) {
+        ctr_debug_log("ctr_gfx_init: gspHasGpuRight, calling gfxExit");
         gfxExit();
+    }
 
     u8 is2DS;
     cfguInit();
     CFGU_GetModelNintendo2DS(&is2DS);
     APT_CheckNew3DS(&isN3DS);
+    ctr_debug_log("ctr_gfx_init: cfgu done");
 
     gfxInitDefault();
+    ctr_debug_log("ctr_gfx_init: gfxInitDefault done");
 
     if (is2DS == 1) {
         gfxSetWide(true);
@@ -621,6 +632,7 @@ void ctr_gfx_init()
         ctr_gfx.isWide = false;
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
+    ctr_debug_log("ctr_gfx_init: C3D_Init done");
 
     topRenderTarget = C3D_RenderTargetCreate(
             GSP_SCREEN_WIDTH, ctr_gfx.isWide ? GSP_SCREEN_HEIGHT_TOP_2X : GSP_SCREEN_HEIGHT_TOP, GPU_RB_RGB8, GPU_RB_DEPTH16);
@@ -628,11 +640,13 @@ void ctr_gfx_init()
 
     bottomRenderTarget = C3D_RenderTargetCreate(GSP_SCREEN_WIDTH, GSP_SCREEN_HEIGHT_BOTTOM, GPU_RB_RGB8, GPU_RB_DEPTH16);
     C3D_RenderTargetSetOutput(bottomRenderTarget, GFX_BOTTOM, GFX_LEFT, DISPLAY_TRANSFER_FLAGS);
+    ctr_debug_log("ctr_gfx_init: render targets done");
 
     vshader_dvlb = DVLB_ParseFile((uint32_t *)vshader_shbin, vshader_shbin_size);
     shaderProgramInit(&program);
     shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]);
     C3D_BindProgram(&program);
+    ctr_debug_log("ctr_gfx_init: shader done");
 
     uLoc_projection = shaderInstanceGetUniformLocation(program.vertexShader, "projection");
 
@@ -644,18 +658,27 @@ void ctr_gfx_init()
     Mtx_OrthoTilt(&topProjection, 0, ctr_gfx.isWide ? GSP_SCREEN_HEIGHT_TOP_2X : GSP_SCREEN_HEIGHT_TOP, 0, GSP_SCREEN_WIDTH, 0.1f, 1.f, true);
     Mtx_OrthoTilt(&bottomProjection, 0, GSP_SCREEN_HEIGHT_BOTTOM, 0, GSP_SCREEN_WIDTH, 0.1f, 1.f, true);
 
+    ctr_debug_log("ctr_gfx_init: calling initTransferTexture");
     initTransferTexture();
-    romfsInit();
+    ctr_debug_log("ctr_gfx_init: initTransferTexture done");
 
-	if (!loadTextureFromFile(&static_tex, NULL, "romfs:/gfx/frame_tex.t3x")) {
-		showMesageBox("loadTextureFromFile failed\n");
-		exit(EXIT_FAILURE);
-	}
-	C3D_TexSetFilter(&static_tex, GPU_LINEAR, GPU_NEAREST);
+    ctr_debug_log("ctr_gfx_init: calling romfsInit");
+    romfsInit();
+    ctr_debug_log("ctr_gfx_init: romfsInit done");
+
+    if (!loadTextureFromFile(&static_tex, NULL, "romfs:/gfx/frame_tex.t3x")) {
+        ctr_debug_log("ctr_gfx_init: loadTextureFromFile FAILED");
+        showMesageBox("loadTextureFromFile failed\n");
+        exit(EXIT_FAILURE);
+    }
+    ctr_debug_log("ctr_gfx_init: frame texture loaded");
+
+    C3D_TexSetFilter(&static_tex, GPU_LINEAR, GPU_NEAREST);
 
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
     overlayTextBuf = C2D_TextBufNew(4096);
+    ctr_debug_log("ctr_gfx_init: complete");
 }
 
 void ctr_gfx_exit()
