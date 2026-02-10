@@ -337,7 +337,12 @@ int mainMenuWindowHandleEvents()
                     rc = MAIN_MENU_QUOTES;
                 }
 
+#ifdef __3DS__
+                // On 3DS, exit immediately to avoid potential hang in renderPresent/throttle
+                goto mainMenuExit;
+#else
                 break;
+#endif
             }
         }
 
@@ -395,6 +400,7 @@ int mainMenuWindowHandleEvents()
     }
 
 #ifdef __3DS__
+mainMenuExit:
     ctr_debug_log("mainMenu: exiting event loop");
 #endif
 
