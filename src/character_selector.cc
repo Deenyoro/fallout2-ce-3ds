@@ -36,6 +36,7 @@
 
 #ifdef __3DS__
 #include "platform/ctr/ctr_rectmap.h"
+#include "platform/ctr/ctr_sys.h"
 #endif
 
 namespace fallout {
@@ -159,9 +160,21 @@ static std::vector<PremadeCharacterDescription> gCustomPremadeCharacterDescripti
 // 0x4A71D0
 int characterSelectorOpen()
 {
+
+#ifdef __3DS__
+    ctr_debug_log("charSelector: open start");
+#endif
+
     if (!characterSelectorWindowInit()) {
+#ifdef __3DS__
+        ctr_debug_log("charSelector: windowInit FAILED");
+#endif
         return 0;
     }
+
+#ifdef __3DS__
+    ctr_debug_log("charSelector: windowInit done");
+#endif
 
     bool cursorWasHidden = cursorIsHidden();
     if (cursorWasHidden) {
@@ -169,7 +182,13 @@ int characterSelectorOpen()
     }
 
     colorPaletteLoad("color.pal");
+#ifdef __3DS__
+    ctr_debug_log("charSelector: palette loaded");
+#endif
     paletteFadeTo(_cmap);
+#ifdef __3DS__
+    ctr_debug_log("charSelector: fade done, entering loop");
+#endif
 
     int rc = 0;
     bool done = false;
@@ -275,6 +294,10 @@ int characterSelectorOpen()
 // 0x4A7468
 static bool characterSelectorWindowInit()
 {
+#ifdef __3DS__
+    ctr_debug_log("charSelectorInit: enter");
+#endif
+
     if (gCharacterSelectorWindow != -1) {
         return false;
     }
@@ -283,8 +306,15 @@ static bool characterSelectorWindowInit()
     int characterSelectorWindowY = (screenGetHeight() - CS_WINDOW_HEIGHT) / 2;
     gCharacterSelectorWindow = windowCreate(characterSelectorWindowX, characterSelectorWindowY, CS_WINDOW_WIDTH, CS_WINDOW_HEIGHT, _colorTable[0], 0);
     if (gCharacterSelectorWindow == -1) {
+#ifdef __3DS__
+        ctr_debug_log("charSelectorInit: windowCreate failed");
+#endif
         return characterSelectorWindowFatalError(false);
     }
+
+#ifdef __3DS__
+    ctr_debug_log("charSelectorInit: window created");
+#endif
 
     gCharacterSelectorWindowBuffer = windowGetBuffer(gCharacterSelectorWindow);
     if (gCharacterSelectorWindowBuffer == nullptr) {
@@ -336,6 +366,10 @@ static bool characterSelectorWindowInit()
 #endif
 
     backgroundFrmImage.unlock();
+
+#ifdef __3DS__
+    ctr_debug_log("charSelectorInit: background loaded");
+#endif
 
     int fid;
 
@@ -520,11 +554,22 @@ static bool characterSelectorWindowInit()
 
     gCurrentPremadeCharacter = PREMADE_CHARACTER_NARG;
 
+#ifdef __3DS__
+    ctr_debug_log("charSelectorInit: buttons done, refreshing");
+#endif
+
     windowRefresh(gCharacterSelectorWindow);
 
     if (!characterSelectorWindowRefresh()) {
+#ifdef __3DS__
+        ctr_debug_log("charSelectorInit: refresh FAILED");
+#endif
         return characterSelectorWindowFatalError(false);
     }
+
+#ifdef __3DS__
+    ctr_debug_log("charSelectorInit: complete");
+#endif
 
     return true;
 }
