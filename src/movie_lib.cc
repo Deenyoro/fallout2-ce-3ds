@@ -817,6 +817,22 @@ LABEL_5:
             if (sync_late && !sync_FrameDropped) {
                 continue;
             }
+
+            // On O3DS, proactively drop every other frame (7.5fps display)
+            // to keep up with audio. N3DS keeps adaptive dropping only.
+            {
+                static bool isO3DS_checked = false;
+                static bool isO3DS = false;
+                if (!isO3DS_checked) {
+                    bool n3ds = false;
+                    APT_CheckNew3DS(&n3ds);
+                    isO3DS = !n3ds;
+                    isO3DS_checked = true;
+                }
+                if (isO3DS && (rm_FrameCount & 1)) {
+                    continue;
+                }
+            }
 #endif
 
             // swap movie surfaces
@@ -1094,8 +1110,10 @@ static void _MVE_sndSync()
         }
         v0 = true;
 
-#if defined(EMSCRIPTEN) || defined(__3DS__)
+#ifdef EMSCRIPTEN
         delay_ms(1);
+#elif defined(__3DS__)
+        svcSleepThread(0); // yield without oversleeping
 #endif
     }
 
@@ -1119,6 +1137,15 @@ static int syncWaitLevel(int wait)
     }
 
     deadline = sync_time + wait;
+#ifdef __3DS__
+    // Non-blocking: check once, yield if early, proceed if late.
+    // Audio plays from its ring buffer independently.
+    diff = deadline + 1000 * compat_timeGetTime();
+    if (diff < 0) {
+        svcSleepThread(1000000LL); // 1ms yield
+        diff = deadline + 1000 * compat_timeGetTime();
+    }
+#else
     do {
         diff = deadline + 1000 * compat_timeGetTime();
         if (diff < 0) {
@@ -1126,6 +1153,7 @@ static int syncWaitLevel(int wait)
         }
         diff = deadline + 1000 * compat_timeGetTime();
     } while (diff < 0);
+#endif
 
     sync_time += sync_wait_quanta;
 

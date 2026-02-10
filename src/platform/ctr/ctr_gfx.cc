@@ -466,6 +466,7 @@ void drawRects()
 
 #ifdef _DEBUG_OVERLAY
     show_overlay();
+    gpuStateReady = false; // C2D overlay invalidates GPU state
 #endif
 
     finishRender();
@@ -480,14 +481,47 @@ void drawFrameRect()
 
 // Pre-computed RGB565 palette lookup table
 static uint16_t rgb565Palette[256];
+static bool paletteDirty = true;
+
+// Dirty rect tracking for partial conversion
+static int dirtyY0 = 0;
+static int dirtyY1 = -1; // -1 means no dirty info (full surface)
+
+// GPU state caching
+static bool gpuStateReady = false;
 
 static inline void updateRgb565Palette(SDL_Color* palette)
 {
+    if (!paletteDirty) return;
     for (int i = 0; i < 256; i++) {
         rgb565Palette[i] = ((palette[i].r >> 3) << 11)
                          | ((palette[i].g >> 2) << 5)
                          | (palette[i].b >> 3);
     }
+    paletteDirty = false;
+}
+
+void ctr_gfx_mark_palette_dirty(void)
+{
+    paletteDirty = true;
+}
+
+void ctr_gfx_set_dirty_rect(int y0, int y1)
+{
+    if (dirtyY1 < 0) {
+        // First dirty rect this frame
+        dirtyY0 = y0;
+        dirtyY1 = y1;
+    } else {
+        // Union with existing dirty range
+        if (y0 < dirtyY0) dirtyY0 = y0;
+        if (y1 > dirtyY1) dirtyY1 = y1;
+    }
+}
+
+void ctr_gfx_invalidate_gpu_state(void)
+{
+    gpuStateReady = false;
 }
 
 void ctr_gfx_draw(SDL_Surface* gSdlSurface)
@@ -498,12 +532,17 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
     static u64 gfxTotalDraw = 0;
     u64 tStart = osGetTime();
 
-    C3D_BindProgram(&program);
+    // Opt 5: Only re-init GPU state when invalidated (e.g. after C2D overlay draws)
+    if (!gpuStateReady) {
+        C3D_BindProgram(&program);
 
-    C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
-    AttrInfo_Init(attrInfo);
-    AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 3); // v0=position
-    AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 2); // v1=texcoord
+        C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
+        AttrInfo_Init(attrInfo);
+        AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 3); // v0=position
+        AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 2); // v1=texcoord
+
+        gpuStateReady = true;
+    }
 
     Uint8* dst = (Uint8*)renderTextureData;
     Uint8* src = (Uint8*)gSdlSurface->pixels;
@@ -528,7 +567,15 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
                 if (subEnd > endY && subEnd <= surfaceHeight) endY = subEnd;
             }
         }
+    } else if (dirtyY1 >= 0) {
+        // Opt 8: Use dirty rect bounds for non-movie modes
+        startY = dirtyY0;
+        endY = dirtyY1;
+        if (startY < 0) startY = 0;
+        if (endY > surfaceHeight) endY = surfaceHeight;
     }
+    // Reset dirty tracking for next frame
+    dirtyY1 = -1;
 
     updateRgb565Palette(palette);
 
@@ -553,17 +600,20 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
 
     u64 tAfterConvert = osGetTime();
 
-    // Partial cache flush: only flush modified rows during movie playback
-    if (startY > 0 || endY < (int)renderTextureHeight) {
+    // Opt 3/9: Cap transfer height to actual content, 8-aligned for GPU tiles
+    int transferHeight = (endY + 7) & ~7;
+    if (transferHeight > (int)renderTextureHeight) transferHeight = (int)renderTextureHeight;
+
+    if (startY > 0 || transferHeight < (int)renderTextureHeight) {
         uint32_t flushOffset = startY * renderTextureStride;
-        uint32_t flushSize = (endY - startY) * renderTextureStride;
+        uint32_t flushSize = (transferHeight - startY) * renderTextureStride;
         GSPGPU_FlushDataCache(renderTextureData + flushOffset, flushSize);
     } else {
         GSPGPU_FlushDataCache(renderTextureData, renderTextureByteCount);
     }
 
-    C3D_SyncDisplayTransfer((u32*)renderTextureData, GX_BUFFER_DIM(renderTextureWidth, renderTextureHeight),
-            (u32*)render_tex.data, GX_BUFFER_DIM(renderTextureWidth, renderTextureHeight), TEXTURE_TRANSFER_FLAGS);
+    C3D_SyncDisplayTransfer((u32*)renderTextureData, GX_BUFFER_DIM(renderTextureWidth, transferHeight),
+            (u32*)render_tex.data, GX_BUFFER_DIM(renderTextureWidth, transferHeight), TEXTURE_TRANSFER_FLAGS);
 
     u64 tAfterTransfer = osGetTime();
 
@@ -593,6 +643,76 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
         gfxTotalTransfer = 0;
         gfxTotalDraw = 0;
     }
+}
+
+// Opt 2: Direct movie draw — reads from MVE decode buffer, palette-converts
+// inline to the GPU render texture, skipping blitBufferToBuffer + SDL surface.
+void ctr_gfx_draw_movie(unsigned char* pixels, int width, int height, SDL_Color* palette)
+{
+    if (!gpuStateReady) {
+        C3D_BindProgram(&program);
+
+        C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
+        AttrInfo_Init(attrInfo);
+        AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 3);
+        AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 2);
+
+        gpuStateReady = true;
+    }
+
+    // Force palette rebuild from movie palette
+    for (int i = 0; i < 256; i++) {
+        rgb565Palette[i] = ((palette[i].r >> 3) << 11)
+                         | ((palette[i].g >> 2) << 5)
+                         | (palette[i].b >> 3);
+    }
+
+    Uint8* dst = (Uint8*)renderTextureData;
+    int destY = 0;
+    if (numRectsInMap[DISPLAY_MOVIE] > 0) {
+        destY = rectMaps[DISPLAY_MOVIE][0]->src_y;
+        if (destY < 0) destY = 0;
+    }
+
+    int endY = destY + height;
+    if (endY > (int)renderTextureHeight) endY = (int)renderTextureHeight;
+
+    for (int y = 0; y < height && (destY + y) < endY; y++) {
+        uint32_t* rowDst32 = (uint32_t*)(dst + (destY + y) * renderTextureStride);
+        unsigned char* rowSrc = pixels + y * width;
+
+        int x = 0;
+        for (; x <= width - 4; x += 4) {
+            uint32_t s = *(uint32_t*)(rowSrc + x);
+            rowDst32[x >> 1]       = rgb565Palette[s & 0xFF]
+                                   | ((uint32_t)rgb565Palette[(s >> 8) & 0xFF] << 16);
+            rowDst32[(x >> 1) + 1] = rgb565Palette[(s >> 16) & 0xFF]
+                                   | ((uint32_t)rgb565Palette[s >> 24] << 16);
+        }
+        uint16_t* rowDst16 = (uint16_t*)(dst + (destY + y) * renderTextureStride);
+        for (; x < width; x++) {
+            rowDst16[x] = rgb565Palette[rowSrc[x]];
+        }
+    }
+
+    int transferHeight = (endY + 7) & ~7;
+    if (transferHeight > (int)renderTextureHeight) transferHeight = (int)renderTextureHeight;
+
+    uint32_t flushOffset = destY * renderTextureStride;
+    uint32_t flushSize = (transferHeight - destY) * renderTextureStride;
+    GSPGPU_FlushDataCache(renderTextureData + flushOffset, flushSize);
+
+    C3D_SyncDisplayTransfer((u32*)renderTextureData, GX_BUFFER_DIM(renderTextureWidth, transferHeight),
+            (u32*)render_tex.data, GX_BUFFER_DIM(renderTextureWidth, transferHeight), TEXTURE_TRANSFER_FLAGS);
+
+    C3D_TexBind(0, &render_tex);
+
+    C3D_TexEnv* env = C3D_GetTexEnv(0);
+    C3D_TexEnvInit(env);
+    C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
+    C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
+
+    drawRects();
 }
 
 void beginRender(bool vSync)

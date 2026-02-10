@@ -27,6 +27,10 @@ typedef struct {
 extern ctr_gfx_t ctr_gfx;
 
 void ctr_gfx_draw(SDL_Surface* gSdlSurface);
+void ctr_gfx_draw_movie(unsigned char* pixels, int width, int height, SDL_Color* palette);
+void ctr_gfx_mark_palette_dirty(void);
+void ctr_gfx_set_dirty_rect(int y0, int y1);
+void ctr_gfx_invalidate_gpu_state(void);
 
 void ctr_gfx_reinit(void);
 void ctr_gfx_init(void);
