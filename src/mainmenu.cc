@@ -263,16 +263,31 @@ void mainMenuWindowHide(bool animate)
         return;
     }
 
+#ifdef __3DS__
+    ctr_debug_log("mainMenuHide: soundContinueAll");
+#endif
     soundContinueAll();
 
     if (animate) {
+#ifdef __3DS__
+        ctr_debug_log("mainMenuHide: paletteFadeTo black start");
+#endif
         paletteFadeTo(gPaletteBlack);
+#ifdef __3DS__
+        ctr_debug_log("mainMenuHide: paletteFadeTo black done");
+#endif
         soundContinueAll();
     }
 
+#ifdef __3DS__
+    ctr_debug_log("mainMenuHide: windowHide");
+#endif
     windowHide(gMainMenuWindow);
 
     gMainMenuWindowHidden = true;
+#ifdef __3DS__
+    ctr_debug_log("mainMenuHide: complete");
+#endif
 }
 
 // 0x481A48
