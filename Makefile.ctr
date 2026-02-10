@@ -181,16 +181,6 @@ endif
 .PHONY: all clean 3dslink gdb deps
 
 #---------------------------------------------------------------------------------
-# Fetch fpattern dependency if not present
-#---------------------------------------------------------------------------------
-deps: $(FPATTERN_DIR)/include/fpattern/fpattern.h
-
-$(FPATTERN_DIR)/include/fpattern/fpattern.h:
-	@echo "Fetching fpattern..."
-	@git clone $(FPATTERN_REPO) $(FPATTERN_DIR)
-	@cd $(FPATTERN_DIR) && git checkout $(FPATTERN_TAG)
-
-#---------------------------------------------------------------------------------
 all: deps $(BUILD) $(GFXBUILD) $(DEPSDIR) $(ROMFS_T3XFILES) $(T3XHFILES)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile.ctr
 
@@ -205,6 +195,16 @@ ifneq ($(DEPSDIR),$(BUILD))
 $(DEPSDIR):
 	@mkdir -p $@
 endif
+
+#---------------------------------------------------------------------------------
+# Fetch fpattern dependency if not present
+#---------------------------------------------------------------------------------
+deps: $(FPATTERN_DIR)/include/fpattern/fpattern.h
+
+$(FPATTERN_DIR)/include/fpattern/fpattern.h:
+	@echo "Fetching fpattern..."
+	@git clone $(FPATTERN_REPO) $(FPATTERN_DIR)
+	@cd $(FPATTERN_DIR) && git checkout $(FPATTERN_TAG)
 
 #---------------------------------------------------------------------------------
 clean:

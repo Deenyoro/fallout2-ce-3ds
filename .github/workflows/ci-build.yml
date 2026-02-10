@@ -20,6 +20,7 @@ jobs:
       - name: Build
         run: |
           make -f Makefile.ctr -j$(nproc)
+          ls -la fallout2-ce.3dsx fallout2-ce.cia
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
