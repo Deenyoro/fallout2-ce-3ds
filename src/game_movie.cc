@@ -25,6 +25,9 @@
 #include "platform/ctr/ctr_rectmap.h"
 #include "platform/ctr/ctr_input.h"
 #include "platform/ctr/ctr_sys.h"
+#define CTR_LOG(msg) ctr_debug_log(msg)
+#else
+#define CTR_LOG(msg) ((void)0)
 #endif
 
 namespace fallout {
@@ -146,6 +149,7 @@ int gameMoviesSave(File* stream)
 int gameMoviePlay(int movie, int flags)
 {
     gGameMovieIsPlaying = true;
+    CTR_LOG("gameMoviePlay: enter");
 
     const char* movieFileName = gMovieFileNames[movie];
     debugPrint("\nPlaying movie: %s\n", movieFileName);
@@ -176,6 +180,7 @@ int gameMoviePlay(int movie, int flags)
         gGameMovieFaded = true;
     }
 
+    CTR_LOG("gameMoviePlay: creating window");
     int gameMovieWindowX = (screenGetWidth() - GAME_MOVIE_WINDOW_WIDTH) / 2;
     int gameMovieWindowY = (screenGetHeight() - GAME_MOVIE_WINDOW_HEIGHT) / 2;
     int win = windowCreate(gameMovieWindowX,
@@ -189,16 +194,19 @@ int gameMoviePlay(int movie, int flags)
         return -1;
     }
 
+    CTR_LOG("gameMoviePlay: window created");
     if ((flags & GAME_MOVIE_STOP_MUSIC) != 0) {
         backgroundSoundDelete();
     } else if ((flags & GAME_MOVIE_PAUSE_MUSIC) != 0) {
         backgroundSoundPause();
     }
+    CTR_LOG("gameMoviePlay: music handled");
 
 #ifdef __3DS__
     setActiveRectMap(DISPLAY_MOVIE);
 #endif
 
+    CTR_LOG("gameMoviePlay: calling windowRefresh");
     windowRefresh(win);
 
     bool subtitlesEnabled = settings.preferences.subtitles;
@@ -250,8 +258,11 @@ int gameMoviePlay(int movie, int flags)
 
     movieEffectsLoad(movieFilePath);
 
+    CTR_LOG("gameMoviePlay: calling _zero_vid_mem");
     _zero_vid_mem();
+    CTR_LOG("gameMoviePlay: calling _movieRun");
     _movieRun(win, movieFilePath);
+    CTR_LOG("gameMoviePlay: _movieRun done, entering loop");
 
     int v11 = 0;
     int buttons;

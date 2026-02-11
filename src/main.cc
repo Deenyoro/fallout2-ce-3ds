@@ -139,6 +139,9 @@ int falloutMain(int argc, char** argv)
                 CTR_LOG("NEW_GAME: calling characterSelectorOpen...");
                 if (characterSelectorOpen() == 2) {
                     CTR_LOG("NEW_GAME: charSelector returned 2, playing elder movie");
+#ifdef __3DS__
+                    setActiveRectMap(DISPLAY_FULL);
+#endif
                     gameMoviePlay(MOVIE_ELDER, GAME_MOVIE_STOP_MUSIC);
                     CTR_LOG("NEW_GAME: elder movie done");
                     randomSeedPrerandom(-1);
