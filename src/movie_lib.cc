@@ -31,7 +31,7 @@ static void moviePerfOpen()
     if (!g_moviePerfLog) {
         g_moviePerfLog = fopen("sdmc:/3ds/fallout2/movie_perf.log", "w");
         if (g_moviePerfLog) {
-            fprintf(g_moviePerfLog, "frame,decode_us,show_us,sync_us,total_us,late,dropped\n");
+            fprintf(g_moviePerfLog, "frame,decode_us,show_us,sync_us,io_us,audio_us,total_us,late,dropped\n");
             fflush(g_moviePerfLog);
         }
     }
@@ -49,10 +49,11 @@ static void moviePerfClose()
     if (g_moviePerfLog) {
         fprintf(g_moviePerfLog, "\n# summary: %d frames, %d late, %d dropped\n",
             g_moviePerfFrameNum, g_moviePerfLateCount, g_moviePerfDropCount);
-        fprintf(g_moviePerfLog, "# avg decode=%llu us, show=%llu us, sync=%llu us, total=%llu us\n",
+        fprintf(g_moviePerfLog, "# avg decode=%llu us, show=%llu us, sync=%llu us, io=%llu us, audio=%llu us, total=%llu us\n",
             g_moviePerfFrameNum > 0 ? g_moviePerfDecodeTotal / g_moviePerfFrameNum : 0,
             g_moviePerfFrameNum > 0 ? g_moviePerfShowTotal / g_moviePerfFrameNum : 0,
             g_moviePerfFrameNum > 0 ? g_moviePerfSyncTotal / g_moviePerfFrameNum : 0,
+            (u64)0, (u64)0,
             g_moviePerfFrameNum > 0 ? g_moviePerfFrameTotal / g_moviePerfFrameNum : 0);
         fclose(g_moviePerfLog);
         g_moviePerfLog = nullptr;
@@ -686,7 +687,7 @@ int _MVE_rmStepMovie()
 {
 #ifdef __3DS__
     u64 tFrameStart = svcGetSystemTick();
-    u64 tDecode = 0, tShow = 0, tSync = 0;
+    u64 tDecode = 0, tShow = 0, tSync = 0, tIo = 0, tAudio = 0;
     int frameLate = 0, frameDropped = 0;
 #endif
     int v0;
@@ -730,7 +731,15 @@ LABEL_5:
             return -1;
         case 1:
             v0 = 0;
+#ifdef __3DS__
+            {
+                u64 t0 = svcGetSystemTick();
+                v1 = (unsigned short*)ioNextRecord();
+                tIo += svcGetSystemTick() - t0;
+            }
+#else
             v1 = (unsigned short*)ioNextRecord();
+#endif
             goto LABEL_5;
         case 2:
             if (!syncInit(v1[0], v1[2])) {
@@ -844,11 +853,13 @@ LABEL_5:
                 g_moviePerfFrameTotal += ticksToUs(tTotal);
                 if (frameLate) g_moviePerfLateCount++;
                 if (frameDropped) g_moviePerfDropCount++;
-                fprintf(g_moviePerfLog, "%d,%llu,%llu,%llu,%llu,%d,%d\n",
+                fprintf(g_moviePerfLog, "%d,%llu,%llu,%llu,%llu,%llu,%llu,%d,%d\n",
                     g_moviePerfFrameNum,
                     ticksToUs(tDecode),
                     ticksToUs(tShow),
                     ticksToUs(tSync),
+                    ticksToUs(tIo),
+                    ticksToUs(tAudio),
                     ticksToUs(tTotal),
                     frameLate,
                     frameDropped);
@@ -865,7 +876,15 @@ LABEL_5:
                 if ((v5 >> 16) != 8) {
                     v14 = nullptr;
                 }
+#ifdef __3DS__
+                {
+                    u64 t0 = svcGetSystemTick();
+                    _CallsSndBuff_Loc(v14, v1[2]);
+                    tAudio += svcGetSystemTick() - t0;
+                }
+#else
                 _CallsSndBuff_Loc(v14, v1[2]);
+#endif
             }
             continue;
         case 10:
