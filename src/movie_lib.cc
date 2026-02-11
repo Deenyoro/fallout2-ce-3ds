@@ -11,10 +11,6 @@
 #include "audio_engine.h"
 #include "platform_compat.h"
 
-#ifdef __3DS__
-#include <3ds.h>
-#endif
-
 
 namespace fallout {
 
@@ -618,9 +614,6 @@ static int syncWait()
     if (sync_active) {
         while ((sync_time + 1000 * compat_timeGetTime()) < 0) {
             late = 1;
-#ifdef __3DS__
-            svcSleepThread(1000000); // 1ms yield
-#endif
         }
         sync_time += sync_wait_quanta;
     }
@@ -1040,9 +1033,6 @@ static int syncWaitLevel(int wait)
     deadline = sync_time + wait;
     do {
         diff = deadline + 1000 * compat_timeGetTime();
-#ifdef __3DS__
-        if (diff < 0) svcSleepThread(1000000); // 1ms yield
-#endif
     } while (diff < 0);
 
     sync_time += sync_wait_quanta;
