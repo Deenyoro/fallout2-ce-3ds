@@ -326,6 +326,11 @@ int gameMoviePlay(int movie, int flags)
         backgroundSoundResume();
     }
 
+#ifdef __3DS__
+    setActiveRectMap(DISPLAY_FULL);
+    ctr_debug_log("gameMoviePlay: rectmap restored");
+#endif
+
     if ((flags & GAME_MOVIE_FADE_OUT) != 0) {
         if (!subtitlesEnabled) {
             colorPaletteLoad("color.pal");
@@ -336,7 +341,6 @@ int gameMoviePlay(int movie, int flags)
     }
 
 #ifdef __3DS__
-    setActiveRectMap(DISPLAY_FULL);
     ctr_debug_log("gameMoviePlay: complete");
 #endif
     gGameMovieIsPlaying = false;
