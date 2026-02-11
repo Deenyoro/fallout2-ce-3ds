@@ -1,6 +1,9 @@
 #include "movie.h"
 
 #include <string.h>
+#ifdef __3DS__
+#include <stdlib.h>
+#endif
 
 #include <SDL.h>
 
@@ -200,10 +203,46 @@ static void movieFreeImpl(void* ptr)
 }
 
 // 0x48662C
+#ifdef __3DS__
+#define MOVIE_READAHEAD_SIZE (256 * 1024)
+static unsigned char* gMovieReadBuf = nullptr;
+static int gMovieReadBufValid = 0;
+static int gMovieReadBufPos = 0;
+
+static bool movieReadImpl(void* handle, void* buf, int count)
+{
+    if (gMovieReadBuf == nullptr) {
+        return fileRead(buf, 1, count, (File*)handle) == count;
+    }
+
+    unsigned char* dst = (unsigned char*)buf;
+    int remaining = count;
+
+    while (remaining > 0) {
+        int available = gMovieReadBufValid - gMovieReadBufPos;
+        if (available > 0) {
+            int toCopy = (remaining < available) ? remaining : available;
+            memcpy(dst, gMovieReadBuf + gMovieReadBufPos, toCopy);
+            gMovieReadBufPos += toCopy;
+            dst += toCopy;
+            remaining -= toCopy;
+        } else {
+            int bytesRead = fileRead(gMovieReadBuf, 1, MOVIE_READAHEAD_SIZE, (File*)handle);
+            if (bytesRead <= 0) {
+                return false;
+            }
+            gMovieReadBufValid = bytesRead;
+            gMovieReadBufPos = 0;
+        }
+    }
+    return true;
+}
+#else
 static bool movieReadImpl(void* handle, void* buf, int count)
 {
     return fileRead(buf, 1, count, (File*)handle) == count;
 }
+#endif
 
 // 0x486654
 static void movieDirectImpl(unsigned char* pixels, int src_width, int src_height, int src_x, int src_y, int dst_width, int dst_height, int dst_x, int dst_y)
@@ -432,6 +471,15 @@ static void _cleanupMovie(int a1)
     }
 
     MVE_ReleaseMem();
+
+#ifdef __3DS__
+    if (gMovieReadBuf != nullptr) {
+        free(gMovieReadBuf);
+        gMovieReadBuf = nullptr;
+        gMovieReadBufValid = 0;
+        gMovieReadBufPos = 0;
+    }
+#endif
 
     fileClose(gMovieFileStream);
 
@@ -698,6 +746,12 @@ static int _movieStart(int win, char* filePath)
     if (gMovieFileStream == nullptr) {
         return 1;
     }
+
+#ifdef __3DS__
+    gMovieReadBuf = (unsigned char*)malloc(MOVIE_READAHEAD_SIZE);
+    gMovieReadBufValid = 0;
+    gMovieReadBufPos = 0;
+#endif
 
     gMovieWindow = win;
     _running = 1;
