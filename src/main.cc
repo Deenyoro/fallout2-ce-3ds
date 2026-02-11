@@ -44,7 +44,9 @@
 #ifdef __3DS__
 #include "platform/ctr/ctr_rectmap.h"
 #include "platform/ctr/ctr_sys.h"
+#ifdef _DEBUG_PERF
 #include "platform/ctr/ctr_perf.h"
+#endif
 #define CTR_LOG(msg) ctr_debug_log(msg)
 #else
 #define CTR_LOG(msg) ((void)0)
@@ -364,7 +366,7 @@ static void mainLoop()
 
     _main_game_paused = 0;
 
-#ifdef __3DS__
+#if defined(__3DS__) && defined(_DEBUG_PERF)
     ctrPerfInit();
 #endif
 
@@ -373,14 +375,14 @@ static void mainLoop()
     while (_game_user_wants_to_quit == 0) {
         sharedFpsLimiter.mark();
 
-#ifdef __3DS__
+#if defined(__3DS__) && defined(_DEBUG_PERF)
         ctrPerfFrameBegin();
         u64 t0 = svcGetSystemTick();
 #endif
 
         int keyCode = inputGetInput();
 
-#ifdef __3DS__
+#if defined(__3DS__) && defined(_DEBUG_PERF)
         g_ctrPerf.inputGetInput = svcGetSystemTick() - t0;
         t0 = svcGetSystemTick();
 #endif
@@ -388,21 +390,21 @@ static void mainLoop()
         // SFALL: MainLoopHook.
         sfall_gl_scr_process_main();
 
-#ifdef __3DS__
+#if defined(__3DS__) && defined(_DEBUG_PERF)
         g_ctrPerf.sfallMainHook = svcGetSystemTick() - t0;
         t0 = svcGetSystemTick();
 #endif
 
         gameHandleKey(keyCode, false);
 
-#ifdef __3DS__
+#if defined(__3DS__) && defined(_DEBUG_PERF)
         g_ctrPerf.gameHandleKey = svcGetSystemTick() - t0;
         t0 = svcGetSystemTick();
 #endif
 
         scriptsHandleRequests();
 
-#ifdef __3DS__
+#if defined(__3DS__) && defined(_DEBUG_PERF)
         g_ctrPerf.scriptsHandleReq = svcGetSystemTick() - t0;
 #endif
 
@@ -418,13 +420,13 @@ static void mainLoop()
             _game_user_wants_to_quit = 2;
         }
 
-#ifdef __3DS__
+#if defined(__3DS__) && defined(_DEBUG_PERF)
         t0 = svcGetSystemTick();
 #endif
 
         renderPresent();
 
-#ifdef __3DS__
+#if defined(__3DS__) && defined(_DEBUG_PERF)
         g_ctrPerf.renderPresent = svcGetSystemTick() - t0;
         ctrPerfFrameEnd();
 #endif
@@ -432,7 +434,7 @@ static void mainLoop()
         sharedFpsLimiter.throttle();
     }
 
-#ifdef __3DS__
+#if defined(__3DS__) && defined(_DEBUG_PERF)
     ctrPerfClose();
 #endif
 

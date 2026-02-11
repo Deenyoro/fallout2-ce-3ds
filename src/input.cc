@@ -17,7 +17,6 @@
 
 #ifdef __3DS__
 #include "platform/ctr/ctr_input.h"
-#include "platform/ctr/ctr_perf.h"
 #endif
 
 namespace fallout {
@@ -198,15 +197,7 @@ void _process_bk()
 {
     int v1;
 
-#ifdef __3DS__
-    {
-        u64 t0 = svcGetSystemTick();
-        tickersExecute();
-        g_ctrPerf.tickersExecute += svcGetSystemTick() - t0;
-    }
-#else
     tickersExecute();
-#endif
 
 #ifdef __3DS__
     ctr_input_process();
