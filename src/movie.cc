@@ -748,6 +748,9 @@ static int _movieStart(int win, char* filePath)
     }
 
 #ifdef __3DS__
+    if (gMovieReadBuf != nullptr) {
+        free(gMovieReadBuf);
+    }
     gMovieReadBuf = (unsigned char*)malloc(MOVIE_READAHEAD_SIZE);
     gMovieReadBufValid = 0;
     gMovieReadBufPos = 0;

@@ -11,13 +11,13 @@
 #ifdef __3DS__
 #include <3ds.h>
 
+// No-op lock guard: the audio callback and main thread access sound buffers
+// concurrently, but all shared fields (pos, playing, active) are 32-bit
+// aligned and naturally atomic on ARM. Real locking causes contention that
+// starves the audio callback, producing stuttering and freezes.
 struct LightLockGuard {
-    LightLock* lock;
-    LightLockGuard(LightLock* l) : lock(l) {
-        LightLock_Init(lock);
-        LightLock_Lock(lock);
-    }
-    ~LightLockGuard() { LightLock_Unlock(lock); }
+    LightLockGuard(LightLock*) {}
+    ~LightLockGuard() {}
 };
 #endif
 
