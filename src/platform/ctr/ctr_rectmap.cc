@@ -253,7 +253,7 @@ void ctr_rectmap_init()
 
     addRectMap(DISPLAY_FULL,              0,   0,   0, 640, 480,   0,   0, 320, 240);
     addRectMap(DISPLAY_FIELD,             0,   0,   0, 400, 240,   0,   0, 400, 240);
-    addRectMap(DISPLAY_MOVIE,             0, 105,  80, 430, 320,  40,   0, 320, 240);
+    addRectMap(DISPLAY_MOVIE,             0,   0,  80, 640, 320,   0,  20, 400, 200);
     addRectMap(DISPLAY_MOVIE_SUB,         0, 105, 401, 430,  80,   0,  60, 320, 120);
     addRectMap(DISPLAY_MAIN,              0,  25,  15, 230, 260,  43,   0, 234, 240);
 

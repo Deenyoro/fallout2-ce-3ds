@@ -34,10 +34,6 @@ void (*_scr_blit)(unsigned char* src, int src_pitch, int a3, int src_x, int src_
 // 0x6ACA1C
 void (*_zero_mem)() = nullptr;
 
-#ifdef __3DS__
-static bool gfxFrameDirty = false;
-#endif
-
 SDL_Window* gSdlWindow = nullptr;
 SDL_Surface* gSdlSurface = nullptr;
 SDL_Renderer* gSdlRenderer = nullptr;
@@ -345,7 +341,6 @@ void _GNW95_ShowRect(unsigned char* src, int srcPitch, int a3, int srcX, int src
     blitBufferToBuffer(src + srcPitch * srcY + srcX, srcWidth, srcHeight, srcPitch, (unsigned char*)gSdlSurface->pixels + gSdlSurface->pitch * destY + destX, gSdlSurface->pitch);
 #ifdef __3DS__
     ctr_gfx_set_dirty_rect(destY, destY + srcHeight);
-    gfxFrameDirty = true;
 #else
     SDL_Rect srcRect;
     srcRect.x = destX;
@@ -375,7 +370,9 @@ void _GNW95_zero_vid_mem()
         surface += gSdlSurface->pitch;
     }
 
-#ifndef __3DS__
+#ifdef __3DS__
+    ctr_gfx_set_dirty_rect(0, gSdlSurface->h);
+#else
     SDL_BlitSurface(gSdlSurface, nullptr, gSdlTextureSurface, nullptr);
 #endif
 }
@@ -458,8 +455,10 @@ static void destroyRenderer()
 
 void handleWindowSizeChanged()
 {
+#ifndef __3DS__
     destroyRenderer();
     createRenderer(screenGetWidth(), screenGetHeight());
+#endif
 }
 
 void renderPresent()

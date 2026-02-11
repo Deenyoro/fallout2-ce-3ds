@@ -11,10 +11,10 @@
 #ifdef __3DS__
 #include <3ds.h>
 
-struct RecursiveLockGuard {
-    RecursiveLock* lock;
-    RecursiveLockGuard(RecursiveLock* l) : lock(l) { RecursiveLock_Lock(lock); }
-    ~RecursiveLockGuard() { RecursiveLock_Unlock(lock); }
+struct LightLockGuard {
+    LightLock* lock;
+    LightLockGuard(LightLock* l) : lock(l) { LightLock_Lock(lock); }
+    ~LightLockGuard() { LightLock_Unlock(lock); }
 };
 #endif
 
@@ -35,7 +35,7 @@ struct AudioEngineSoundBuffer {
     unsigned int pos;
     SDL_AudioStream* stream;
 #ifdef __3DS__
-    RecursiveLock mutex;
+    LightLock mutex;
 #else
     std::recursive_mutex mutex;
 #endif
@@ -71,7 +71,7 @@ static void audioEngineMixin(void* userData, Uint8* stream, int length)
     for (int index = 0; index < AUDIO_ENGINE_SOUND_BUFFERS; index++) {
         AudioEngineSoundBuffer* soundBuffer = &(gAudioEngineSoundBuffers[index]);
 #ifdef __3DS__
-        RecursiveLockGuard lockGuard(&soundBuffer->mutex);
+        LightLockGuard lockGuard(&soundBuffer->mutex);
 #else
         std::lock_guard<std::recursive_mutex> lock(soundBuffer->mutex);
 #endif
@@ -121,7 +121,7 @@ bool audioEngineInit()
     }
 
     for (int i = 0; i < AUDIO_ENGINE_SOUND_BUFFERS; i++) {
-        RecursiveLock_Init(&gAudioEngineSoundBuffers[i].mutex);
+        LightLock_Init(&gAudioEngineSoundBuffers[i].mutex);
     }
 #endif
 
@@ -179,7 +179,7 @@ int audioEngineCreateSoundBuffer(unsigned int size, int bitsPerSample, int chann
     for (int index = 0; index < AUDIO_ENGINE_SOUND_BUFFERS; index++) {
         AudioEngineSoundBuffer* soundBuffer = &(gAudioEngineSoundBuffers[index]);
 #ifdef __3DS__
-        RecursiveLockGuard lockGuard(&soundBuffer->mutex);
+        LightLockGuard lockGuard(&soundBuffer->mutex);
 #else
         std::lock_guard<std::recursive_mutex> lock(soundBuffer->mutex);
 #endif
@@ -215,7 +215,7 @@ bool audioEngineSoundBufferRelease(int soundBufferIndex)
 
     AudioEngineSoundBuffer* soundBuffer = &(gAudioEngineSoundBuffers[soundBufferIndex]);
 #ifdef __3DS__
-    RecursiveLockGuard lockGuard(&soundBuffer->mutex);
+    LightLockGuard lockGuard(&soundBuffer->mutex);
 #else
     std::lock_guard<std::recursive_mutex> lock(soundBuffer->mutex);
 #endif
@@ -247,7 +247,7 @@ bool audioEngineSoundBufferSetVolume(int soundBufferIndex, int volume)
 
     AudioEngineSoundBuffer* soundBuffer = &(gAudioEngineSoundBuffers[soundBufferIndex]);
 #ifdef __3DS__
-    RecursiveLockGuard lockGuard(&soundBuffer->mutex);
+    LightLockGuard lockGuard(&soundBuffer->mutex);
 #else
     std::lock_guard<std::recursive_mutex> lock(soundBuffer->mutex);
 #endif
@@ -273,7 +273,7 @@ bool audioEngineSoundBufferGetVolume(int soundBufferIndex, int* volumePtr)
 
     AudioEngineSoundBuffer* soundBuffer = &(gAudioEngineSoundBuffers[soundBufferIndex]);
 #ifdef __3DS__
-    RecursiveLockGuard lockGuard(&soundBuffer->mutex);
+    LightLockGuard lockGuard(&soundBuffer->mutex);
 #else
     std::lock_guard<std::recursive_mutex> lock(soundBuffer->mutex);
 #endif
@@ -299,7 +299,7 @@ bool audioEngineSoundBufferSetPan(int soundBufferIndex, int pan)
 
     AudioEngineSoundBuffer* soundBuffer = &(gAudioEngineSoundBuffers[soundBufferIndex]);
 #ifdef __3DS__
-    RecursiveLockGuard lockGuard(&soundBuffer->mutex);
+    LightLockGuard lockGuard(&soundBuffer->mutex);
 #else
     std::lock_guard<std::recursive_mutex> lock(soundBuffer->mutex);
 #endif
@@ -326,7 +326,7 @@ bool audioEngineSoundBufferPlay(int soundBufferIndex, unsigned int flags)
 
     AudioEngineSoundBuffer* soundBuffer = &(gAudioEngineSoundBuffers[soundBufferIndex]);
 #ifdef __3DS__
-    RecursiveLockGuard lockGuard(&soundBuffer->mutex);
+    LightLockGuard lockGuard(&soundBuffer->mutex);
 #else
     std::lock_guard<std::recursive_mutex> lock(soundBuffer->mutex);
 #endif
@@ -356,7 +356,7 @@ bool audioEngineSoundBufferStop(int soundBufferIndex)
 
     AudioEngineSoundBuffer* soundBuffer = &(gAudioEngineSoundBuffers[soundBufferIndex]);
 #ifdef __3DS__
-    RecursiveLockGuard lockGuard(&soundBuffer->mutex);
+    LightLockGuard lockGuard(&soundBuffer->mutex);
 #else
     std::lock_guard<std::recursive_mutex> lock(soundBuffer->mutex);
 #endif
@@ -382,7 +382,7 @@ bool audioEngineSoundBufferGetCurrentPosition(int soundBufferIndex, unsigned int
 
     AudioEngineSoundBuffer* soundBuffer = &(gAudioEngineSoundBuffers[soundBufferIndex]);
 #ifdef __3DS__
-    RecursiveLockGuard lockGuard(&soundBuffer->mutex);
+    LightLockGuard lockGuard(&soundBuffer->mutex);
 #else
     std::lock_guard<std::recursive_mutex> lock(soundBuffer->mutex);
 #endif
@@ -421,7 +421,7 @@ bool audioEngineSoundBufferSetCurrentPosition(int soundBufferIndex, unsigned int
 
     AudioEngineSoundBuffer* soundBuffer = &(gAudioEngineSoundBuffers[soundBufferIndex]);
 #ifdef __3DS__
-    RecursiveLockGuard lockGuard(&soundBuffer->mutex);
+    LightLockGuard lockGuard(&soundBuffer->mutex);
 #else
     std::lock_guard<std::recursive_mutex> lock(soundBuffer->mutex);
 #endif
@@ -447,7 +447,7 @@ bool audioEngineSoundBufferLock(int soundBufferIndex, unsigned int writePos, uns
 
     AudioEngineSoundBuffer* soundBuffer = &(gAudioEngineSoundBuffers[soundBufferIndex]);
 #ifdef __3DS__
-    RecursiveLockGuard lockGuard(&soundBuffer->mutex);
+    LightLockGuard lockGuard(&soundBuffer->mutex);
 #else
     std::lock_guard<std::recursive_mutex> lock(soundBuffer->mutex);
 #endif
@@ -512,7 +512,7 @@ bool audioEngineSoundBufferUnlock(int soundBufferIndex, void* audioPtr1, unsigne
 
     AudioEngineSoundBuffer* soundBuffer = &(gAudioEngineSoundBuffers[soundBufferIndex]);
 #ifdef __3DS__
-    RecursiveLockGuard lockGuard(&soundBuffer->mutex);
+    LightLockGuard lockGuard(&soundBuffer->mutex);
 #else
     std::lock_guard<std::recursive_mutex> lock(soundBuffer->mutex);
 #endif
@@ -538,7 +538,7 @@ bool audioEngineSoundBufferGetStatus(int soundBufferIndex, unsigned int* statusP
 
     AudioEngineSoundBuffer* soundBuffer = &(gAudioEngineSoundBuffers[soundBufferIndex]);
 #ifdef __3DS__
-    RecursiveLockGuard lockGuard(&soundBuffer->mutex);
+    LightLockGuard lockGuard(&soundBuffer->mutex);
 #else
     std::lock_guard<std::recursive_mutex> lock(soundBuffer->mutex);
 #endif
