@@ -10,6 +10,7 @@
 #include "db.h"
 #include "debug.h"
 #include "export.h"
+#include "game_movie.h"
 #include "input.h"
 #include "interpreter_lib.h"
 #include "memory_manager.h"
@@ -3029,20 +3030,30 @@ void _updatePrograms()
     // non-critical calls scheduled from managed windows). One more thing to
     // note is that global scripts in CE cannot handle conditional/timed procs
     // (which are not used anyway).
-    sfall_gl_scr_update(_cpuBurstSize);
+#ifdef __3DS__
+    // On 3DS, skip heavy script interpretation during movie playback.
+    // sfall global scripts and game program interpreters consume 80-100ms
+    // per frame on the ARM11, far exceeding the 33ms frame budget.
+    // _doEvents() and intLibUpdate() are still needed for movie callbacks.
+    if (!gameMovieIsPlaying()) {
+#endif
+        sfall_gl_scr_update(_cpuBurstSize);
 
-    ProgramListNode* curr = gInterpreterProgramListHead;
-    while (curr != nullptr) {
-        ProgramListNode* next = curr->next;
-        if (curr->program != nullptr) {
-            _interpret(curr->program, _cpuBurstSize);
+        ProgramListNode* curr = gInterpreterProgramListHead;
+        while (curr != nullptr) {
+            ProgramListNode* next = curr->next;
+            if (curr->program != nullptr) {
+                _interpret(curr->program, _cpuBurstSize);
 
-            if (curr->program->exited) {
-                programListNodeFree(curr);
+                if (curr->program->exited) {
+                    programListNodeFree(curr);
+                }
             }
+            curr = next;
         }
-        curr = next;
+#ifdef __3DS__
     }
+#endif
     _doEvents();
     intLibUpdate();
 }
