@@ -13,7 +13,10 @@
 
 struct LightLockGuard {
     LightLock* lock;
-    LightLockGuard(LightLock* l) : lock(l) { LightLock_Lock(lock); }
+    LightLockGuard(LightLock* l) : lock(l) {
+        LightLock_Init(lock);
+        LightLock_Lock(lock);
+    }
     ~LightLockGuard() { LightLock_Unlock(lock); }
 };
 #endif
