@@ -3,7 +3,6 @@
 #include <string.h>
 #ifdef __3DS__
 #include <stdlib.h>
-#include <3ds.h>
 #include "platform/ctr/ctr_sys.h"
 #endif
 
@@ -206,22 +205,44 @@ static void movieFreeImpl(void* ptr)
 
 // 0x48662C
 #ifdef __3DS__
-static unsigned char* gMovieMemBuf = nullptr;
-static int gMovieMemSize = 0;
-static int gMovieMemPos = 0;
-static bool gMovieMemLinear = false;
+// Read-ahead buffer to reduce SD card I/O calls.
+// The 3DS SD card has ~80-110ms latency per read. By reading 256KB chunks
+// and serving small reads from the buffer, we amortize this cost.
+#define MOVIE_READAHEAD_SIZE (256 * 1024)
+static unsigned char* gMovieReadBuf = nullptr;
+static int gMovieReadBufValid = 0;  // bytes of valid data in buffer
+static int gMovieReadBufPos = 0;    // current read position in buffer
 
 static bool movieReadImpl(void* handle, void* buf, int count)
 {
-    if (gMovieMemBuf != nullptr) {
-        if (gMovieMemPos + count > gMovieMemSize) {
-            return false;
-        }
-        memcpy(buf, gMovieMemBuf + gMovieMemPos, count);
-        gMovieMemPos += count;
-        return true;
+    if (gMovieReadBuf == nullptr) {
+        // No buffer - fall back to direct reads
+        return fileRead(buf, 1, count, (File*)handle) == count;
     }
-    return fileRead(buf, 1, count, (File*)handle) == count;
+
+    unsigned char* dst = (unsigned char*)buf;
+    int remaining = count;
+
+    while (remaining > 0) {
+        int available = gMovieReadBufValid - gMovieReadBufPos;
+        if (available > 0) {
+            // Serve from buffer
+            int toCopy = (remaining < available) ? remaining : available;
+            memcpy(dst, gMovieReadBuf + gMovieReadBufPos, toCopy);
+            gMovieReadBufPos += toCopy;
+            dst += toCopy;
+            remaining -= toCopy;
+        } else {
+            // Buffer empty — refill from file
+            int bytesRead = fileRead(gMovieReadBuf, 1, MOVIE_READAHEAD_SIZE, (File*)handle);
+            if (bytesRead <= 0) {
+                return false;  // EOF or error
+            }
+            gMovieReadBufValid = bytesRead;
+            gMovieReadBufPos = 0;
+        }
+    }
+    return true;
 }
 #else
 static bool movieReadImpl(void* handle, void* buf, int count)
@@ -459,15 +480,11 @@ static void _cleanupMovie(int a1)
     MVE_ReleaseMem();
 
 #ifdef __3DS__
-    if (gMovieMemBuf != nullptr) {
-        if (gMovieMemLinear)
-            linearFree(gMovieMemBuf);
-        else
-            free(gMovieMemBuf);
-        gMovieMemBuf = nullptr;
-        gMovieMemSize = 0;
-        gMovieMemPos = 0;
-        gMovieMemLinear = false;
+    if (gMovieReadBuf != nullptr) {
+        free(gMovieReadBuf);
+        gMovieReadBuf = nullptr;
+        gMovieReadBufValid = 0;
+        gMovieReadBufPos = 0;
     }
 #endif
 
@@ -738,59 +755,17 @@ static int _movieStart(int win, char* filePath)
     }
 
 #ifdef __3DS__
-    // Pre-load entire movie into memory to avoid slow SD card reads per frame.
-    // SD card IO takes 80-110ms per frame, far exceeding the 33ms budget.
-    {
-        char logbuf[128];
-        int fileSize = fileGetSize(gMovieFileStream);
-        snprintf(logbuf, sizeof(logbuf), "Movie buffer: fileSize=%d", fileSize);
-        ctr_debug_log(logbuf);
-        if (fileSize > 0 && fileSize < 16 * 1024 * 1024) {
-            // Try linearAlloc first (separate memory pool on 3DS), fall back to malloc
-            bool usedLinear = false;
-            gMovieMemBuf = (unsigned char*)linearAlloc(fileSize);
-            if (gMovieMemBuf != nullptr) {
-                usedLinear = true;
-                snprintf(logbuf, sizeof(logbuf), "Movie buffer: linearAlloc OK (%d bytes)", fileSize);
-                ctr_debug_log(logbuf);
-            } else {
-                gMovieMemBuf = (unsigned char*)malloc(fileSize);
-                if (gMovieMemBuf != nullptr) {
-                    snprintf(logbuf, sizeof(logbuf), "Movie buffer: malloc OK (%d bytes)", fileSize);
-                    ctr_debug_log(logbuf);
-                } else {
-                    snprintf(logbuf, sizeof(logbuf), "Movie buffer: ALLOC FAILED for %d bytes", fileSize);
-                    ctr_debug_log(logbuf);
-                }
-            }
-            if (gMovieMemBuf != nullptr) {
-                fileSeek(gMovieFileStream, 0, SEEK_SET);
-                int bytesRead = fileRead(gMovieMemBuf, 1, fileSize, gMovieFileStream);
-                snprintf(logbuf, sizeof(logbuf), "Movie buffer: read %d / %d bytes", bytesRead, fileSize);
-                ctr_debug_log(logbuf);
-                if (bytesRead == fileSize) {
-                    gMovieMemSize = fileSize;
-                    gMovieMemPos = 0;
-                    gMovieMemLinear = usedLinear;
-                    ctr_debug_log("Movie buffer: ACTIVE - serving from RAM");
-                } else {
-                    ctr_debug_log("Movie buffer: read FAILED, falling back to file IO");
-                    if (usedLinear)
-                        linearFree(gMovieMemBuf);
-                    else
-                        free(gMovieMemBuf);
-                    gMovieMemBuf = nullptr;
-                    gMovieMemSize = 0;
-                    gMovieMemPos = 0;
-                    gMovieMemLinear = false;
-                    fileSeek(gMovieFileStream, 0, SEEK_SET);
-                }
-            }
-        } else {
-            snprintf(logbuf, sizeof(logbuf), "Movie buffer: skipped (fileSize=%d)", fileSize);
-            ctr_debug_log(logbuf);
-        }
+    // Allocate 256KB read-ahead buffer to reduce SD card I/O calls.
+    // The 3DS SD card has ~80-110ms latency per small read. By reading 256KB
+    // chunks and serving small reads from the buffer, we amortize this cost.
+    gMovieReadBuf = (unsigned char*)malloc(MOVIE_READAHEAD_SIZE);
+    if (gMovieReadBuf != nullptr) {
+        ctr_debug_log("Movie readahead: 256KB buffer allocated");
+    } else {
+        ctr_debug_log("Movie readahead: allocation FAILED, using direct IO");
     }
+    gMovieReadBufValid = 0;
+    gMovieReadBufPos = 0;
 #endif
 
     gMovieWindow = win;
