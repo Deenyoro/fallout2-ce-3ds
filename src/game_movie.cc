@@ -266,8 +266,17 @@ int gameMoviePlay(int movie, int flags)
 
     int v11 = 0;
     int buttons;
+#ifdef __3DS__
+    int movieLoopCount = 0;
+#endif
     do {
 #ifdef __3DS__
+        movieLoopCount++;
+        if (movieLoopCount <= 3 || movieLoopCount == 10 || movieLoopCount == 50 || movieLoopCount % 200 == 0) {
+            char msg[80];
+            snprintf(msg, sizeof(msg), "movieLoop: iter=%d playing=%d", movieLoopCount, _moviePlaying());
+            ctr_debug_log(msg);
+        }
         if (ctr_input_key_pressed())
             break;
 #endif
