@@ -694,6 +694,7 @@ void initTransferTexture()
     memset(renderTextureData, 0, renderTextureByteCount);
 
     C3D_TexInitVRAM(&render_tex, renderTextureWidth, renderTextureHeight, GPU_RGB565);
+    C3D_TexSetWrap(&render_tex, GPU_CLAMP_TO_EDGE, GPU_CLAMP_TO_EDGE);
 
     setTextureFilter(-1);
 }
@@ -785,6 +786,7 @@ void ctr_gfx_init()
     ctr_debug_log("ctr_gfx_init: frame texture loaded");
 
     C3D_TexSetFilter(&static_tex, GPU_LINEAR, GPU_NEAREST);
+    C3D_TexSetWrap(&static_tex, GPU_CLAMP_TO_EDGE, GPU_CLAMP_TO_EDGE);
 
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
