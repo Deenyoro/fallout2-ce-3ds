@@ -4,6 +4,7 @@
 #ifdef __3DS__
 #include <stdlib.h>
 #include <3ds.h>
+#include "platform/ctr/ctr_sys.h"
 #endif
 
 #include <SDL.h>
@@ -740,33 +741,40 @@ static int _movieStart(int win, char* filePath)
     // Pre-load entire movie into memory to avoid slow SD card reads per frame.
     // SD card IO takes 80-110ms per frame, far exceeding the 33ms budget.
     {
+        char logbuf[128];
         int fileSize = fileGetSize(gMovieFileStream);
-        debugPrint("Movie buffer: fileSize=%d\n", fileSize);
+        snprintf(logbuf, sizeof(logbuf), "Movie buffer: fileSize=%d", fileSize);
+        ctr_debug_log(logbuf);
         if (fileSize > 0 && fileSize < 16 * 1024 * 1024) {
             // Try linearAlloc first (separate memory pool on 3DS), fall back to malloc
             bool usedLinear = false;
             gMovieMemBuf = (unsigned char*)linearAlloc(fileSize);
             if (gMovieMemBuf != nullptr) {
                 usedLinear = true;
-                debugPrint("Movie buffer: linearAlloc OK (%d bytes)\n", fileSize);
+                snprintf(logbuf, sizeof(logbuf), "Movie buffer: linearAlloc OK (%d bytes)", fileSize);
+                ctr_debug_log(logbuf);
             } else {
                 gMovieMemBuf = (unsigned char*)malloc(fileSize);
                 if (gMovieMemBuf != nullptr) {
-                    debugPrint("Movie buffer: malloc OK (%d bytes)\n", fileSize);
+                    snprintf(logbuf, sizeof(logbuf), "Movie buffer: malloc OK (%d bytes)", fileSize);
+                    ctr_debug_log(logbuf);
                 } else {
-                    debugPrint("Movie buffer: ALLOC FAILED for %d bytes\n", fileSize);
+                    snprintf(logbuf, sizeof(logbuf), "Movie buffer: ALLOC FAILED for %d bytes", fileSize);
+                    ctr_debug_log(logbuf);
                 }
             }
             if (gMovieMemBuf != nullptr) {
                 fileSeek(gMovieFileStream, 0, SEEK_SET);
                 int bytesRead = fileRead(gMovieMemBuf, 1, fileSize, gMovieFileStream);
-                debugPrint("Movie buffer: read %d / %d bytes\n", bytesRead, fileSize);
+                snprintf(logbuf, sizeof(logbuf), "Movie buffer: read %d / %d bytes", bytesRead, fileSize);
+                ctr_debug_log(logbuf);
                 if (bytesRead == fileSize) {
                     gMovieMemSize = fileSize;
                     gMovieMemPos = 0;
                     gMovieMemLinear = usedLinear;
+                    ctr_debug_log("Movie buffer: ACTIVE - serving from RAM");
                 } else {
-                    debugPrint("Movie buffer: read FAILED, falling back to file IO\n");
+                    ctr_debug_log("Movie buffer: read FAILED, falling back to file IO");
                     if (usedLinear)
                         linearFree(gMovieMemBuf);
                     else
@@ -779,7 +787,8 @@ static int _movieStart(int win, char* filePath)
                 }
             }
         } else {
-            debugPrint("Movie buffer: skipped (fileSize=%d)\n", fileSize);
+            snprintf(logbuf, sizeof(logbuf), "Movie buffer: skipped (fileSize=%d)", fileSize);
+            ctr_debug_log(logbuf);
         }
     }
 #endif
