@@ -279,9 +279,10 @@ int characterSelectorOpen()
         sharedFpsLimiter.throttle();
     }
 
-#ifndef __3DS__
-    paletteFadeTo(gPaletteBlack);
+#ifdef __3DS__
+    setActiveRectMap(DISPLAY_FULL);
 #endif
+    paletteFadeTo(gPaletteBlack);
     characterSelectorWindowFree();
 
     if (cursorWasHidden) {
