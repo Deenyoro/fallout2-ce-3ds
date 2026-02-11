@@ -212,7 +212,7 @@ inline void drawRect(const float subTexX, const float subTexY, const float subTe
 
 void drawRects()
 {
-    beginRender(false);
+    beginRender(ctr_rectMap.active == DISPLAY_MOVIE);
     drawTopRenderTarget(0x000000);
 
     switch (ctr_rectMap.active)
