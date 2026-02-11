@@ -9,7 +9,6 @@
 #include <string.h>
 
 #include "audio_engine.h"
-#include "delay.h"
 #include "platform_compat.h"
 
 namespace fallout {
@@ -614,10 +613,6 @@ static int syncWait()
     if (sync_active) {
         while ((sync_time + 1000 * compat_timeGetTime()) < 0) {
             late = 1;
-#ifdef __3DS__
-            int sleepMs = -(sync_time + 1000 * compat_timeGetTime()) / 1000 - 3;
-            if (sleepMs > 0) delay_ms(sleepMs);
-#endif
         }
         sync_time += sync_wait_quanta;
     }
@@ -799,6 +794,14 @@ LABEL_5:
                 break;
             }
 
+#ifdef __3DS__
+            // Skip decode when behind schedule — saves the most CPU time.
+            // Case 7 will also skip the show (sfShowFrame) when sync_late.
+            if (sync_late) {
+                continue;
+            }
+#endif
+
             // swap movie surfaces
             if (v1[6] & 0x01) {
                 movieSwapSurfaces();
@@ -872,10 +875,6 @@ static void MVE_syncSync()
 {
     if (sync_active) {
         while (sync_time + 1000 * compat_timeGetTime() < 0) {
-#ifdef __3DS__
-            int sleepMs = -(sync_time + 1000 * compat_timeGetTime()) / 1000 - 3;
-            if (sleepMs > 0) delay_ms(sleepMs);
-#endif
         }
     }
 }
@@ -1042,13 +1041,6 @@ static int syncWaitLevel(int wait)
     deadline = sync_time + wait;
     do {
         diff = deadline + 1000 * compat_timeGetTime();
-#ifdef __3DS__
-        if (diff < 0) {
-            int sleepMs = -diff / 1000 - 3;
-            if (sleepMs > 0) delay_ms(sleepMs);
-            diff = deadline + 1000 * compat_timeGetTime();
-        }
-#endif
     } while (diff < 0);
 
     sync_time += sync_wait_quanta;
