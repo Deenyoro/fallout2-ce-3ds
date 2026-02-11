@@ -526,11 +526,13 @@ void ctr_gfx_invalidate_gpu_state(void)
 
 void ctr_gfx_draw(SDL_Surface* gSdlSurface)
 {
+#ifdef _DEBUG_OVERLAY
     static int gfxFrameCount = 0;
     static u64 gfxTotalConvert = 0;
     static u64 gfxTotalTransfer = 0;
     static u64 gfxTotalDraw = 0;
     u64 tStart = osGetTime();
+#endif
 
     // Opt 5: Only re-init GPU state when invalidated (e.g. after C2D overlay draws)
     if (!gpuStateReady) {
@@ -548,6 +550,7 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
     Uint8* src = (Uint8*)gSdlSurface->pixels;
     SDL_Color* palette = gSdlSurface->format->palette->colors;
 
+    int surfacePitch = gSdlSurface->pitch;
     int surfaceWidth = gSdlSurface->w;
     int surfaceHeight = gSdlSurface->h;
 
@@ -564,7 +567,9 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
             if (startY < 0) startY = 0;
             if (numRectsInMap[DISPLAY_MOVIE_SUB] > 0) {
                 int subEnd = rectMaps[DISPLAY_MOVIE_SUB][0]->src_y + rectMaps[DISPLAY_MOVIE_SUB][0]->src_h;
-                if (subEnd > endY && subEnd <= surfaceHeight) endY = subEnd;
+                if (subEnd > endY) {
+                    endY = (subEnd <= surfaceHeight) ? subEnd : surfaceHeight;
+                }
             }
         }
     } else if (dirtyY1 >= 0) {
@@ -581,7 +586,7 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
 
     for (int y = startY; y < endY; y++) {
         uint32_t* rowDst32 = (uint32_t*)(dst + y * renderTextureStride);
-        Uint8* rowSrc = src + y * surfaceWidth;
+        Uint8* rowSrc = src + y * surfacePitch;
 
         int x = 0;
         // Process 4 pixels at a time: pack 2 RGB565 values per 32-bit store
@@ -598,7 +603,9 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
         }
     }
 
+#ifdef _DEBUG_OVERLAY
     u64 tAfterConvert = osGetTime();
+#endif
 
     // Opt 3/9: Cap transfer height to actual content, 8-aligned for GPU tiles
     int transferHeight = (endY + 7) & ~7;
@@ -615,7 +622,9 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
     C3D_SyncDisplayTransfer((u32*)renderTextureData, GX_BUFFER_DIM(renderTextureWidth, transferHeight),
             (u32*)render_tex.data, GX_BUFFER_DIM(renderTextureWidth, transferHeight), TEXTURE_TRANSFER_FLAGS);
 
+#ifdef _DEBUG_OVERLAY
     u64 tAfterTransfer = osGetTime();
+#endif
 
     C3D_TexBind(0, &render_tex);
 
@@ -626,6 +635,7 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
 
     drawRects();
 
+#ifdef _DEBUG_OVERLAY
     u64 tAfterDraw = osGetTime();
 
     gfxTotalConvert += (tAfterConvert - tStart);
@@ -643,76 +653,7 @@ void ctr_gfx_draw(SDL_Surface* gSdlSurface)
         gfxTotalTransfer = 0;
         gfxTotalDraw = 0;
     }
-}
-
-// Opt 2: Direct movie draw — reads from MVE decode buffer, palette-converts
-// inline to the GPU render texture, skipping blitBufferToBuffer + SDL surface.
-void ctr_gfx_draw_movie(unsigned char* pixels, int width, int height, SDL_Color* palette)
-{
-    if (!gpuStateReady) {
-        C3D_BindProgram(&program);
-
-        C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
-        AttrInfo_Init(attrInfo);
-        AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 3);
-        AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 2);
-
-        gpuStateReady = true;
-    }
-
-    // Force palette rebuild from movie palette
-    for (int i = 0; i < 256; i++) {
-        rgb565Palette[i] = ((palette[i].r >> 3) << 11)
-                         | ((palette[i].g >> 2) << 5)
-                         | (palette[i].b >> 3);
-    }
-
-    Uint8* dst = (Uint8*)renderTextureData;
-    int destY = 0;
-    if (numRectsInMap[DISPLAY_MOVIE] > 0) {
-        destY = rectMaps[DISPLAY_MOVIE][0]->src_y;
-        if (destY < 0) destY = 0;
-    }
-
-    int endY = destY + height;
-    if (endY > (int)renderTextureHeight) endY = (int)renderTextureHeight;
-
-    for (int y = 0; y < height && (destY + y) < endY; y++) {
-        uint32_t* rowDst32 = (uint32_t*)(dst + (destY + y) * renderTextureStride);
-        unsigned char* rowSrc = pixels + y * width;
-
-        int x = 0;
-        for (; x <= width - 4; x += 4) {
-            uint32_t s = *(uint32_t*)(rowSrc + x);
-            rowDst32[x >> 1]       = rgb565Palette[s & 0xFF]
-                                   | ((uint32_t)rgb565Palette[(s >> 8) & 0xFF] << 16);
-            rowDst32[(x >> 1) + 1] = rgb565Palette[(s >> 16) & 0xFF]
-                                   | ((uint32_t)rgb565Palette[s >> 24] << 16);
-        }
-        uint16_t* rowDst16 = (uint16_t*)(dst + (destY + y) * renderTextureStride);
-        for (; x < width; x++) {
-            rowDst16[x] = rgb565Palette[rowSrc[x]];
-        }
-    }
-
-    int transferHeight = (endY + 7) & ~7;
-    if (transferHeight > (int)renderTextureHeight) transferHeight = (int)renderTextureHeight;
-
-    uint32_t flushOffset = destY * renderTextureStride;
-    uint32_t flushSize = (transferHeight - destY) * renderTextureStride;
-    GSPGPU_FlushDataCache(renderTextureData + flushOffset, flushSize);
-
-    C3D_SyncDisplayTransfer((u32*)renderTextureData, GX_BUFFER_DIM(renderTextureWidth, transferHeight),
-            (u32*)render_tex.data, GX_BUFFER_DIM(renderTextureWidth, transferHeight), TEXTURE_TRANSFER_FLAGS);
-
-    C3D_TexBind(0, &render_tex);
-
-    C3D_TexEnv* env = C3D_GetTexEnv(0);
-    C3D_TexEnvInit(env);
-    C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_PRIMARY_COLOR, GPU_PRIMARY_COLOR);
-    C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
-
-    drawRects();
+#endif
 }
 
 void beginRender(bool vSync)

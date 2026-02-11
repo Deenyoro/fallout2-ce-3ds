@@ -12,10 +12,6 @@
 #include "delay.h"
 #include "platform_compat.h"
 
-#ifdef __3DS__
-#include "platform/ctr/ctr_sys.h"
-#endif
-
 namespace fallout {
 
 typedef struct MveMem {
@@ -618,7 +614,10 @@ static int syncWait()
     if (sync_active) {
         while ((sync_time + 1000 * compat_timeGetTime()) < 0) {
             late = 1;
-            delay_ms(-(sync_time + 1000 * compat_timeGetTime()) / 1000 - 3);
+#ifdef __3DS__
+            int sleepMs = -(sync_time + 1000 * compat_timeGetTime()) / 1000 - 3;
+            if (sleepMs > 0) delay_ms(sleepMs);
+#endif
         }
         sync_time += sync_wait_quanta;
     }
@@ -754,15 +753,6 @@ LABEL_5:
                 ++rm_FrameDropCount;
             }
 
-#ifdef __3DS__
-            if (rm_FrameCount % 30 == 0) {
-                char buf[128];
-                snprintf(buf, sizeof(buf), "mve: frame=%d dropped=%d late=%d",
-                    rm_FrameCount, rm_FrameDropCount, sync_late);
-                ctr_debug_log(buf);
-            }
-#endif
-
             v20 = v1[1];
             if (v20 && !v21) {
                 palSetPalette(v1[0], v20);
@@ -809,60 +799,12 @@ LABEL_5:
                 break;
             }
 
-#ifdef __3DS__
-            // Skip both swap and decode if this frame will be dropped.
-            // sync_late is set by case 4 (_MVE_sndSync) before we reach case 17.
-            // Skipping both swap+decode preserves correct reference frame ordering:
-            // the next decoded frame will still reference the last decoded frame.
-            if (sync_late && !sync_FrameDropped) {
-                continue;
-            }
-
-            // On O3DS, proactively drop every other frame (7.5fps display)
-            // to keep up with audio. N3DS keeps adaptive dropping only.
-            {
-                static bool isO3DS_checked = false;
-                static bool isO3DS = false;
-                if (!isO3DS_checked) {
-                    bool n3ds = false;
-                    APT_CheckNew3DS(&n3ds);
-                    isO3DS = !n3ds;
-                    isO3DS_checked = true;
-                }
-                if (isO3DS && (rm_FrameCount & 1)) {
-                    continue;
-                }
-            }
-#endif
-
             // swap movie surfaces
             if (v1[6] & 0x01) {
                 movieSwapSurfaces();
             }
 
-#ifdef __3DS__
-            {
-                static u64 decodeTotalTime = 0;
-                static int decodeFrameCount = 0;
-                u64 decodeStart = osGetTime();
-                _nfPkDecomp((unsigned char*)v3, (unsigned char*)&v1[7], v1[2], v1[3], v1[4], v1[5]);
-                u64 decodeEnd = osGetTime();
-                decodeTotalTime += (decodeEnd - decodeStart);
-                decodeFrameCount++;
-                if (decodeFrameCount == 15) {
-                    char buf[128];
-                    snprintf(buf, sizeof(buf), "decode15f: %lums (avg %lums/f) nf=%dx%d",
-                        (unsigned long)decodeTotalTime,
-                        (unsigned long)(decodeTotalTime / 15),
-                        nf_width, nf_height);
-                    ctr_debug_log(buf);
-                    decodeTotalTime = 0;
-                    decodeFrameCount = 0;
-                }
-            }
-#else
             _nfPkDecomp((unsigned char*)v3, (unsigned char*)&v1[7], v1[2], v1[3], v1[4], v1[5]);
-#endif
 
             continue;
         default:
@@ -887,20 +829,6 @@ static int syncInit(int rate, int resolution)
         sync_wait_quanta = quanta;
         syncReset(quanta);
     }
-
-#ifdef __3DS__
-    {
-        char buf[128];
-        int fps_x100 = 0;
-        if (rate > 0 && resolution > 0) {
-            // rate*resolution = microseconds per frame
-            fps_x100 = 100000000 / (rate * resolution);
-        }
-        snprintf(buf, sizeof(buf), "syncInit: rate=%d res=%d quanta=%d fps=%d.%02d",
-            rate, resolution, quanta, fps_x100 / 100, fps_x100 % 100);
-        ctr_debug_log(buf);
-    }
-#endif
 
     return 1;
 }
@@ -944,6 +872,10 @@ static void MVE_syncSync()
 {
     if (sync_active) {
         while (sync_time + 1000 * compat_timeGetTime() < 0) {
+#ifdef __3DS__
+            int sleepMs = -(sync_time + 1000 * compat_timeGetTime()) / 1000 - 3;
+            if (sleepMs > 0) delay_ms(sleepMs);
+#endif
         }
     }
 }
@@ -978,33 +910,10 @@ static void _MVE_sndSync()
 
     v0 = false;
 
-#ifdef __3DS__
-    static int sndSyncFrameCount = 0;
-    static unsigned int sndSyncTotalTime = 0;
-    unsigned int sndSyncStart = compat_timeGetTime();
-#endif
-
     sync_late = syncWaitLevel(sync_wait_quanta / 4) > -sync_wait_quanta / 2 && !sync_FrameDropped;
     sync_FrameDropped = 0;
 
-#ifdef __3DS__
-    unsigned int sndSyncAfterWait = compat_timeGetTime();
-#endif
-
     if (gMveSoundBuffer == -1) {
-#ifdef __3DS__
-        sndSyncFrameCount++;
-        unsigned int elapsed = compat_timeGetTime() - sndSyncStart;
-        sndSyncTotalTime += elapsed;
-        if (sndSyncFrameCount == 15) {
-            char buf[128];
-            snprintf(buf, sizeof(buf), "sndSync15f: avg=%ums wait=%ums late=%d",
-                sndSyncTotalTime / 15, (sndSyncAfterWait - sndSyncStart), sync_late);
-            ctr_debug_log(buf);
-            sndSyncFrameCount = 0;
-            sndSyncTotalTime = 0;
-        }
-#endif
         return;
     }
 
@@ -1109,10 +1018,6 @@ static void _MVE_sndSync()
             break;
         }
         v0 = true;
-
-#if defined(EMSCRIPTEN) || defined(__3DS__)
-        delay_ms(1);
-#endif
     }
 
     if (dword_6B3660 != dword_6B3AE4) {
@@ -1137,10 +1042,13 @@ static int syncWaitLevel(int wait)
     deadline = sync_time + wait;
     do {
         diff = deadline + 1000 * compat_timeGetTime();
+#ifdef __3DS__
         if (diff < 0) {
-            delay_ms(-diff / 1000 - 3);
+            int sleepMs = -diff / 1000 - 3;
+            if (sleepMs > 0) delay_ms(sleepMs);
+            diff = deadline + 1000 * compat_timeGetTime();
         }
-        diff = deadline + 1000 * compat_timeGetTime();
+#endif
     } while (diff < 0);
 
     sync_time += sync_wait_quanta;

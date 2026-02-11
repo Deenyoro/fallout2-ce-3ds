@@ -20,10 +20,6 @@
 #include "window.h"
 #include "window_manager.h"
 
-#ifdef __3DS__
-#include "platform/ctr/ctr_sys.h"
-#include <3ds.h>
-#endif
 
 namespace fallout {
 
@@ -212,21 +208,6 @@ static bool movieReadImpl(void* handle, void* buf, int count)
 // 0x486654
 static void movieDirectImpl(unsigned char* pixels, int src_width, int src_height, int src_x, int src_y, int dst_width, int dst_height, int dst_x, int dst_y)
 {
-#ifdef __3DS__
-    static int movieFrameCount = 0;
-    static u64 movieTotalBlit = 0;
-    static u64 movieTotalRender = 0;
-    static u64 movieTotalFrame = 0;
-    u64 frameStart = osGetTime();
-
-    if (movieFrameCount == 0) {
-        char buf[128];
-        snprintf(buf, sizeof(buf), "movieDirect: src=%dx%d dst=%dx%d pos=%d,%d",
-            src_width, src_height, dst_width, dst_height, dst_x, dst_y);
-        ctr_debug_log(buf);
-    }
-#endif
-
     int v14;
     int v15;
 
@@ -281,32 +262,8 @@ static void movieDirectImpl(unsigned char* pixels, int src_width, int src_height
     destRect.x += gMovieWindowRect.left;
     destRect.y += gMovieWindowRect.top;
 
-#ifdef __3DS__
-    u64 blitStart = osGetTime();
-#endif
     _scr_blit(pixels, src_width, src_height, src_x, src_y, dst_width, dst_height, dst_x, dst_y);
     renderPresent();
-#ifdef __3DS__
-    u64 blitEnd = osGetTime();
-#endif
-#ifdef __3DS__
-    u64 frameEnd = osGetTime();
-    movieTotalBlit += (blitEnd - blitStart);
-    movieTotalRender += (frameEnd - blitEnd);
-    movieTotalFrame += (frameEnd - frameStart);
-    movieFrameCount++;
-
-    if (movieFrameCount == 15) {
-        char buf[128];
-        snprintf(buf, sizeof(buf), "movie15f: blit=%lums render=%lums total=%lums",
-            (unsigned long)movieTotalBlit, (unsigned long)movieTotalRender, (unsigned long)movieTotalFrame);
-        ctr_debug_log(buf);
-        movieFrameCount = 0;
-        movieTotalBlit = 0;
-        movieTotalRender = 0;
-        movieTotalFrame = 0;
-    }
-#endif
 }
 
 // 0x486900
