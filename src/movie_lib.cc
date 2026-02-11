@@ -1110,10 +1110,8 @@ static void _MVE_sndSync()
         }
         v0 = true;
 
-#ifdef EMSCRIPTEN
+#if defined(EMSCRIPTEN) || defined(__3DS__)
         delay_ms(1);
-#elif defined(__3DS__)
-        svcSleepThread(0); // yield without oversleeping
 #endif
     }
 
@@ -1137,15 +1135,6 @@ static int syncWaitLevel(int wait)
     }
 
     deadline = sync_time + wait;
-#ifdef __3DS__
-    // Tight spin like F1's _syncWaitLevel — no sleep, just poll.
-    // SDL_Delay oversleeps 3-10ms on 3DS, svcSleepThread(1ms) is still
-    // imprecise. Busy-wait is fine here since there's nothing else to do
-    // and precise timing prevents audio desync.
-    do {
-        diff = deadline + 1000 * compat_timeGetTime();
-    } while (diff < 0);
-#else
     do {
         diff = deadline + 1000 * compat_timeGetTime();
         if (diff < 0) {
@@ -1153,7 +1142,6 @@ static int syncWaitLevel(int wait)
         }
         diff = deadline + 1000 * compat_timeGetTime();
     } while (diff < 0);
-#endif
 
     sync_time += sync_wait_quanta;
 
