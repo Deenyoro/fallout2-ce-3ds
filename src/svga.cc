@@ -465,8 +465,6 @@ void handleWindowSizeChanged()
 void renderPresent()
 {
 #ifdef __3DS__
-    if (!gfxFrameDirty) return;
-    gfxFrameDirty = false;
     ctr_gfx_draw(gSdlSurface);
 #else
     SDL_UpdateTexture(gSdlTexture, nullptr, gSdlTextureSurface->pixels, gSdlTextureSurface->pitch);
