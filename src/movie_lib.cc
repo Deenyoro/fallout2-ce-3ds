@@ -1138,13 +1138,15 @@ static int syncWaitLevel(int wait)
 
     deadline = sync_time + wait;
 #ifdef __3DS__
-    // Non-blocking: check once, yield if early, proceed if late.
-    // Audio plays from its ring buffer independently.
-    diff = deadline + 1000 * compat_timeGetTime();
-    if (diff < 0) {
-        svcSleepThread(1000000LL); // 1ms yield
+    // Yield-based wait: use short svcSleepThread yields instead of
+    // SDL_Delay which oversleeps 3-10ms on 3DS.
+    do {
         diff = deadline + 1000 * compat_timeGetTime();
-    }
+        if (diff < 0) {
+            svcSleepThread(1000000LL); // 1ms yield
+        }
+        diff = deadline + 1000 * compat_timeGetTime();
+    } while (diff < 0);
 #else
     do {
         diff = deadline + 1000 * compat_timeGetTime();
