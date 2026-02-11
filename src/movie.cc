@@ -1,6 +1,9 @@
 #include "movie.h"
 
 #include <string.h>
+#ifdef __3DS__
+#include <stdlib.h>
+#endif
 
 #include <SDL.h>
 
@@ -200,10 +203,29 @@ static void movieFreeImpl(void* ptr)
 }
 
 // 0x48662C
+#ifdef __3DS__
+static unsigned char* gMovieMemBuf = nullptr;
+static int gMovieMemSize = 0;
+static int gMovieMemPos = 0;
+
+static bool movieReadImpl(void* handle, void* buf, int count)
+{
+    if (gMovieMemBuf != nullptr) {
+        if (gMovieMemPos + count > gMovieMemSize) {
+            return false;
+        }
+        memcpy(buf, gMovieMemBuf + gMovieMemPos, count);
+        gMovieMemPos += count;
+        return true;
+    }
+    return fileRead(buf, 1, count, (File*)handle) == count;
+}
+#else
 static bool movieReadImpl(void* handle, void* buf, int count)
 {
     return fileRead(buf, 1, count, (File*)handle) == count;
 }
+#endif
 
 // 0x486654
 static void movieDirectImpl(unsigned char* pixels, int src_width, int src_height, int src_x, int src_y, int dst_width, int dst_height, int dst_x, int dst_y)
@@ -432,6 +454,15 @@ static void _cleanupMovie(int a1)
     }
 
     MVE_ReleaseMem();
+
+#ifdef __3DS__
+    if (gMovieMemBuf != nullptr) {
+        free(gMovieMemBuf);
+        gMovieMemBuf = nullptr;
+        gMovieMemSize = 0;
+        gMovieMemPos = 0;
+    }
+#endif
 
     fileClose(gMovieFileStream);
 
@@ -698,6 +729,31 @@ static int _movieStart(int win, char* filePath)
     if (gMovieFileStream == nullptr) {
         return 1;
     }
+
+#ifdef __3DS__
+    // Pre-load entire movie into memory to avoid slow SD card reads per frame.
+    // SD card IO takes 80-110ms per frame, far exceeding the 33ms budget.
+    {
+        int fileSize = fileGetSize(gMovieFileStream);
+        if (fileSize > 0 && fileSize < 16 * 1024 * 1024) {
+            gMovieMemBuf = (unsigned char*)malloc(fileSize);
+            if (gMovieMemBuf != nullptr) {
+                fileSeek(gMovieFileStream, 0, SEEK_SET);
+                int bytesRead = fileRead(gMovieMemBuf, 1, fileSize, gMovieFileStream);
+                if (bytesRead == fileSize) {
+                    gMovieMemSize = fileSize;
+                    gMovieMemPos = 0;
+                } else {
+                    free(gMovieMemBuf);
+                    gMovieMemBuf = nullptr;
+                    gMovieMemSize = 0;
+                    gMovieMemPos = 0;
+                    fileSeek(gMovieFileStream, 0, SEEK_SET);
+                }
+            }
+        }
+    }
+#endif
 
     gMovieWindow = win;
     _running = 1;
