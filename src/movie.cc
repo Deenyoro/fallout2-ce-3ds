@@ -3,7 +3,6 @@
 #include <string.h>
 #ifdef __3DS__
 #include <stdlib.h>
-#include "platform/ctr/ctr_sys.h"
 #endif
 
 #include <SDL.h>
@@ -209,13 +208,9 @@ static void movieFreeImpl(void* ptr)
 static unsigned char* gMovieReadBuf = nullptr;
 static int gMovieReadBufValid = 0;
 static int gMovieReadBufPos = 0;
-static int gMovieReadCallCount = 0;
-static int gMovieReadFillCount = 0;
 
 static bool movieReadImpl(void* handle, void* buf, int count)
 {
-    gMovieReadCallCount++;
-
     if (gMovieReadBuf == nullptr) {
         return fileRead(buf, 1, count, (File*)handle) == count;
     }
@@ -233,12 +228,7 @@ static bool movieReadImpl(void* handle, void* buf, int count)
             remaining -= toCopy;
         } else {
             int bytesRead = fileRead(gMovieReadBuf, 1, MOVIE_READAHEAD_SIZE, (File*)handle);
-            gMovieReadFillCount++;
             if (bytesRead <= 0) {
-                char msg[128];
-                snprintf(msg, sizeof(msg), "movieRead: fill FAILED at call=%d fill=%d count=%d",
-                    gMovieReadCallCount, gMovieReadFillCount, count);
-                ctr_debug_log(msg);
                 return false;
             }
             gMovieReadBufValid = bytesRead;
@@ -764,14 +754,6 @@ static int _movieStart(int win, char* filePath)
     gMovieReadBuf = (unsigned char*)malloc(MOVIE_READAHEAD_SIZE);
     gMovieReadBufValid = 0;
     gMovieReadBufPos = 0;
-    gMovieReadCallCount = 0;
-    gMovieReadFillCount = 0;
-    {
-        char msg[128];
-        snprintf(msg, sizeof(msg), "_movieStart: buffer=%s path=%s",
-            gMovieReadBuf ? "allocated" : "FAILED", filePath);
-        ctr_debug_log(msg);
-    }
 #endif
 
     gMovieWindow = win;
