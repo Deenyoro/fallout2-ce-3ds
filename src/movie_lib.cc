@@ -1138,13 +1138,11 @@ static int syncWaitLevel(int wait)
 
     deadline = sync_time + wait;
 #ifdef __3DS__
-    // Yield-based wait: use short svcSleepThread yields instead of
-    // SDL_Delay which oversleeps 3-10ms on 3DS.
+    // Tight spin like F1's _syncWaitLevel — no sleep, just poll.
+    // SDL_Delay oversleeps 3-10ms on 3DS, svcSleepThread(1ms) is still
+    // imprecise. Busy-wait is fine here since there's nothing else to do
+    // and precise timing prevents audio desync.
     do {
-        diff = deadline + 1000 * compat_timeGetTime();
-        if (diff < 0) {
-            svcSleepThread(1000000LL); // 1ms yield
-        }
         diff = deadline + 1000 * compat_timeGetTime();
     } while (diff < 0);
 #else
