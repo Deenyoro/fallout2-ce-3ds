@@ -684,8 +684,13 @@ static void _doBkProcesses()
 
         // NOTE: There is a loop at 0x4A3C64, consisting of one iteration, going
         // downwards from 1.
-        for (int index = 0; index < 1; index++) {
-            _updatePrograms();
+        // Skip script interpretation during movie playback - on 3DS the ARM11
+        // cannot afford running sfall global scripts and game program interpreters
+        // every frame while also decoding video.
+        if (!gameMovieIsPlaying()) {
+            for (int index = 0; index < 1; index++) {
+                _updatePrograms();
+            }
         }
     }
 
