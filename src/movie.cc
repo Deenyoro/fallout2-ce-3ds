@@ -21,7 +21,6 @@
 #include "window_manager.h"
 
 #ifdef __3DS__
-#include "platform/ctr/ctr_gfx.h"
 #include "platform/ctr/ctr_sys.h"
 #include <3ds.h>
 #endif
@@ -284,20 +283,11 @@ static void movieDirectImpl(unsigned char* pixels, int src_width, int src_height
 
 #ifdef __3DS__
     u64 blitStart = osGetTime();
-    if (gMovieSubtitleHead == nullptr) {
-        // Direct path: skip blitBufferToBuffer + SDL surface,
-        // palette-convert directly from decode buffer to GPU texture
-        SDL_Color* pal = gSdlSurface->format->palette->colors;
-        ctr_gfx_draw_movie(pixels, src_width, src_height, pal);
-    } else {
-        // Subtitle path: must blit to SDL surface for subtitle compositing
-        _scr_blit(pixels, src_width, src_height, src_x, src_y, dst_width, dst_height, dst_x, dst_y);
-        renderPresent();
-    }
-    u64 blitEnd = osGetTime();
-#else
+#endif
     _scr_blit(pixels, src_width, src_height, src_x, src_y, dst_width, dst_height, dst_x, dst_y);
     renderPresent();
+#ifdef __3DS__
+    u64 blitEnd = osGetTime();
 #endif
 #ifdef __3DS__
     u64 frameEnd = osGetTime();
