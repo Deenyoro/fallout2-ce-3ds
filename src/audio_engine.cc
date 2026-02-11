@@ -11,22 +11,14 @@
 #ifdef __3DS__
 #include <3ds.h>
 
-// Match F1's locking approach: LightLock_Init + Lock/Unlock on every use.
-// LightLock_Init re-initializes the lock each time (preventing deadlocks
-// but not providing true mutual exclusion). Critically, LightLock_Init
-// includes a __dmb() (ARM Data Memory Barrier) which ensures memory
-// visibility between the main thread and the SDL audio callback thread.
-// Without these barriers, the audio callback reads stale buffer data on
-// ARM11's weakly-ordered memory, causing audio pops and stuttering.
+// Lock-free guard with memory barriers only. Real locking (Init+Lock/Unlock)
+// causes contention that deadlocks or starves the audio callback on 3DS.
+// Instead, use __dmb() (ARM Data Memory Barrier) to ensure memory visibility
+// between the main thread and the SDL audio callback. Without barriers,
+// the callback reads stale buffer data on ARM11's weakly-ordered memory.
 struct LightLockGuard {
-    LightLock* lock;
-    LightLockGuard(LightLock* _lock) : lock(_lock) {
-        LightLock_Init(lock);
-        LightLock_Lock(lock);
-    }
-    ~LightLockGuard() {
-        LightLock_Unlock(lock);
-    }
+    LightLockGuard(LightLock*) { __dmb(); }
+    ~LightLockGuard() { __dmb(); }
 };
 #endif
 
