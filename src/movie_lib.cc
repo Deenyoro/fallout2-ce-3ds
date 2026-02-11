@@ -11,6 +11,55 @@
 #include "audio_engine.h"
 #include "platform_compat.h"
 
+#ifdef __3DS__
+#include <3ds.h>
+
+static FILE* g_moviePerfLog = nullptr;
+static int g_moviePerfFrameNum = 0;
+static u64 g_moviePerfDecodeTotal = 0;
+static u64 g_moviePerfShowTotal = 0;
+static u64 g_moviePerfSyncTotal = 0;
+static u64 g_moviePerfFrameTotal = 0;
+static int g_moviePerfDropCount = 0;
+static int g_moviePerfLateCount = 0;
+
+// CPU ticks to microseconds (268MHz CPU)
+static inline u64 ticksToUs(u64 ticks) { return ticks * 1000000ULL / SYSCLOCK_ARM11; }
+
+static void moviePerfOpen()
+{
+    if (!g_moviePerfLog) {
+        g_moviePerfLog = fopen("sdmc:/3ds/fallout2/movie_perf.log", "w");
+        if (g_moviePerfLog) {
+            fprintf(g_moviePerfLog, "frame,decode_us,show_us,sync_us,total_us,late,dropped\n");
+            fflush(g_moviePerfLog);
+        }
+    }
+    g_moviePerfFrameNum = 0;
+    g_moviePerfDecodeTotal = 0;
+    g_moviePerfShowTotal = 0;
+    g_moviePerfSyncTotal = 0;
+    g_moviePerfFrameTotal = 0;
+    g_moviePerfDropCount = 0;
+    g_moviePerfLateCount = 0;
+}
+
+static void moviePerfClose()
+{
+    if (g_moviePerfLog) {
+        fprintf(g_moviePerfLog, "\n# summary: %d frames, %d late, %d dropped\n",
+            g_moviePerfFrameNum, g_moviePerfLateCount, g_moviePerfDropCount);
+        fprintf(g_moviePerfLog, "# avg decode=%llu us, show=%llu us, sync=%llu us, total=%llu us\n",
+            g_moviePerfFrameNum > 0 ? g_moviePerfDecodeTotal / g_moviePerfFrameNum : 0,
+            g_moviePerfFrameNum > 0 ? g_moviePerfShowTotal / g_moviePerfFrameNum : 0,
+            g_moviePerfFrameNum > 0 ? g_moviePerfSyncTotal / g_moviePerfFrameNum : 0,
+            g_moviePerfFrameNum > 0 ? g_moviePerfFrameTotal / g_moviePerfFrameNum : 0);
+        fclose(g_moviePerfLog);
+        g_moviePerfLog = nullptr;
+    }
+}
+#endif
+
 namespace fallout {
 
 typedef struct MveMem {
@@ -516,6 +565,10 @@ int MVE_rmPrepMovie(void* handle, int dx, int dy, unsigned char track)
     rm_FrameCount = 0;
     rm_FrameDropCount = 0;
 
+#ifdef __3DS__
+    moviePerfOpen();
+#endif
+
     return 0;
 }
 
@@ -631,6 +684,11 @@ static void _MVE_sndPause()
 // 0x4F4EC0
 int _MVE_rmStepMovie()
 {
+#ifdef __3DS__
+    u64 tFrameStart = svcGetSystemTick();
+    u64 tDecode = 0, tShow = 0, tSync = 0;
+    int frameLate = 0, frameDropped = 0;
+#endif
     int v0;
     unsigned short* v1;
     unsigned int v5;
@@ -699,7 +757,16 @@ LABEL_5:
             break;
         case 4:
             // initialize audio buffers
+#ifdef __3DS__
+            {
+                u64 t0 = svcGetSystemTick();
+                _MVE_sndSync();
+                tSync += svcGetSystemTick() - t0;
+                frameLate = sync_late;
+            }
+#else
             _MVE_sndSync();
+#endif
             continue;
         case 5:
             v9 = 0;
@@ -742,10 +809,21 @@ LABEL_5:
             if (v21) {
                 _do_nothing_(rm_dx, rm_dy, v21);
             } else if (!sync_late || v1[1]) {
+#ifdef __3DS__
+                {
+                    u64 t0 = svcGetSystemTick();
+                    sfShowFrame(rm_dx, rm_dy, v18);
+                    tShow += svcGetSystemTick() - t0;
+                }
+#else
                 sfShowFrame(rm_dx, rm_dy, v18);
+#endif
             } else {
                 sync_FrameDropped = 1;
                 ++rm_FrameDropCount;
+#ifdef __3DS__
+                frameDropped = 1;
+#endif
             }
 
             v20 = v1[1];
@@ -755,6 +833,28 @@ LABEL_5:
 
             rm_p = (unsigned char*)v1;
             rm_len = v0;
+
+#ifdef __3DS__
+            if (g_moviePerfLog) {
+                u64 tTotal = svcGetSystemTick() - tFrameStart;
+                g_moviePerfFrameNum++;
+                g_moviePerfDecodeTotal += ticksToUs(tDecode);
+                g_moviePerfShowTotal += ticksToUs(tShow);
+                g_moviePerfSyncTotal += ticksToUs(tSync);
+                g_moviePerfFrameTotal += ticksToUs(tTotal);
+                if (frameLate) g_moviePerfLateCount++;
+                if (frameDropped) g_moviePerfDropCount++;
+                fprintf(g_moviePerfLog, "%d,%llu,%llu,%llu,%llu,%d,%d\n",
+                    g_moviePerfFrameNum,
+                    ticksToUs(tDecode),
+                    ticksToUs(tShow),
+                    ticksToUs(tSync),
+                    ticksToUs(tTotal),
+                    frameLate,
+                    frameDropped);
+                if (g_moviePerfFrameNum % 30 == 0) fflush(g_moviePerfLog);
+            }
+#endif
 
             return 0;
         case 8:
@@ -794,20 +894,20 @@ LABEL_5:
                 break;
             }
 
-#ifdef __3DS__
-            // Skip decode when behind schedule — saves the most CPU time.
-            // Case 7 will also skip the show (sfShowFrame) when sync_late.
-            if (sync_late) {
-                continue;
-            }
-#endif
-
             // swap movie surfaces
             if (v1[6] & 0x01) {
                 movieSwapSurfaces();
             }
 
+#ifdef __3DS__
+            {
+                u64 t0 = svcGetSystemTick();
+                _nfPkDecomp((unsigned char*)v3, (unsigned char*)&v1[7], v1[2], v1[3], v1[4], v1[5]);
+                tDecode += svcGetSystemTick() - t0;
+            }
+#else
             _nfPkDecomp((unsigned char*)v3, (unsigned char*)&v1[7], v1[2], v1[3], v1[4], v1[5]);
+#endif
 
             continue;
         default:
@@ -1281,6 +1381,9 @@ static void palLoadPalette(unsigned char* palette, int start, int count)
 void MVE_rmEndMovie()
 {
     if (rm_active) {
+#ifdef __3DS__
+        moviePerfClose();
+#endif
         syncWait();
         syncRelease();
         _MVE_sndReset();

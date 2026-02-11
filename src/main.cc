@@ -44,6 +44,7 @@
 #ifdef __3DS__
 #include "platform/ctr/ctr_rectmap.h"
 #include "platform/ctr/ctr_sys.h"
+#include "platform/ctr/ctr_perf.h"
 #define CTR_LOG(msg) ctr_debug_log(msg)
 #else
 #define CTR_LOG(msg) ((void)0)
@@ -360,19 +361,47 @@ static void mainLoop()
 
     _main_game_paused = 0;
 
+#ifdef __3DS__
+    ctrPerfInit();
+#endif
+
     scriptsEnable();
 
     while (_game_user_wants_to_quit == 0) {
         sharedFpsLimiter.mark();
 
+#ifdef __3DS__
+        ctrPerfFrameBegin();
+        u64 t0 = svcGetSystemTick();
+#endif
+
         int keyCode = inputGetInput();
+
+#ifdef __3DS__
+        g_ctrPerf.inputGetInput = svcGetSystemTick() - t0;
+        t0 = svcGetSystemTick();
+#endif
 
         // SFALL: MainLoopHook.
         sfall_gl_scr_process_main();
 
+#ifdef __3DS__
+        g_ctrPerf.sfallMainHook = svcGetSystemTick() - t0;
+        t0 = svcGetSystemTick();
+#endif
+
         gameHandleKey(keyCode, false);
 
+#ifdef __3DS__
+        g_ctrPerf.gameHandleKey = svcGetSystemTick() - t0;
+        t0 = svcGetSystemTick();
+#endif
+
         scriptsHandleRequests();
+
+#ifdef __3DS__
+        g_ctrPerf.scriptsHandleReq = svcGetSystemTick() - t0;
+#endif
 
         mapHandleTransition();
 
@@ -386,9 +415,23 @@ static void mainLoop()
             _game_user_wants_to_quit = 2;
         }
 
+#ifdef __3DS__
+        t0 = svcGetSystemTick();
+#endif
+
         renderPresent();
+
+#ifdef __3DS__
+        g_ctrPerf.renderPresent = svcGetSystemTick() - t0;
+        ctrPerfFrameEnd();
+#endif
+
         sharedFpsLimiter.throttle();
     }
+
+#ifdef __3DS__
+    ctrPerfClose();
+#endif
 
     scriptsDisable();
 
