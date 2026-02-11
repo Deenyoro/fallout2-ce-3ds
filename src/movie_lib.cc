@@ -612,8 +612,14 @@ static int syncWait()
 
     late = 0;
     if (sync_active) {
-        while ((sync_time + 1000 * compat_timeGetTime()) < 0) {
+        // Use bitwise sign-bit check instead of < 0. The expression
+        // sync_time (int) + 1000 * compat_timeGetTime() (unsigned int)
+        // promotes to unsigned int in C++, making < 0 always false.
+        // The & 0x80000000 check correctly detects the sign bit.
+        if (((sync_time + 1000 * compat_timeGetTime()) & 0x80000000) != 0) {
             late = 1;
+            while (((sync_time + 1000 * compat_timeGetTime()) & 0x80000000) != 0)
+                ;
         }
         sync_time += sync_wait_quanta;
     }
@@ -866,7 +872,7 @@ static int _MVE_sndConfigure(int a1, int a2, int a3, int a4, int a5, int a6)
 static void MVE_syncSync()
 {
     if (sync_active) {
-        while (sync_time + 1000 * compat_timeGetTime() < 0) {
+        while (((sync_time + 1000 * compat_timeGetTime()) & 0x80000000) != 0) {
         }
     }
 }
@@ -901,7 +907,7 @@ static void _MVE_sndSync()
 
     v0 = false;
 
-    sync_late = syncWaitLevel(sync_wait_quanta / 4) > -sync_wait_quanta / 2 && !sync_FrameDropped;
+    sync_late = syncWaitLevel(sync_wait_quanta >> 2) > -sync_wait_quanta >> 1 && !sync_FrameDropped;
     sync_FrameDropped = 0;
 
     if (gMveSoundBuffer == -1) {

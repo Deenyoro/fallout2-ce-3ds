@@ -41,10 +41,6 @@
 
 #include "worldmap.h"
 
-#ifdef __3DS__
-#include "platform/ctr/ctr_perf.h"
-#endif
-
 namespace fallout {
 
 #define SCRIPT_LIST_EXTENT_SIZE 16
@@ -689,30 +685,12 @@ static void _doBkProcesses()
 
         // NOTE: There is a loop at 0x4A3C64, consisting of one iteration, going
         // downwards from 1.
-#ifdef __3DS__
-        {
-            u64 t0 = svcGetSystemTick();
-            for (int index = 0; index < 1; index++) {
-                _updatePrograms();
-            }
-            g_ctrPerf.updatePrograms += svcGetSystemTick() - t0;
-        }
-#else
         for (int index = 0; index < 1; index++) {
             _updatePrograms();
         }
-#endif
     }
 
-#ifdef __3DS__
-    {
-        u64 t0 = svcGetSystemTick();
-        _updateWindows();
-        g_ctrPerf.updateWindows += svcGetSystemTick() - t0;
-    }
-#else
     _updateWindows();
-#endif
 
     if (gScriptsEnabled && _script_engine_run_critters) {
         // SFALL: Fix to prevent the execution of critter_p_proc and game events
