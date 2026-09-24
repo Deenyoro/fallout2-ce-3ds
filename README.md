@@ -105,6 +105,24 @@ $ make deps
 $ make -f Makefile.ctr
 ```
 
+## Building / Releases (GitLab CI)
+
+The 3DS port builds on GitLab CI (`.gitlab-ci.yml`); the GitHub Actions workflows in `.github/workflows/` are disabled and kept only for reference.
+
+- **When it runs:** on `v*` tags, and when a pipeline is started from the GitLab web UI or API. Plain pushes and merge requests do not start pipelines.
+- **`version-check`** (alpine): for a release (a `v*` tag or `RELEASE_VERSION`), checks that the startup banner in `src/win32.cc` (`=== Fallout 2 CE 3DS vX.Y.Z ===`) matches the version, using `ci/check-version.sh`. A `RELEASE_VERSION` run must be started on that tag.
+- **`build-3ds`** (cluster runner, `devkitpro/devkitarm:20251231`, pinned by digest): `ci/build-3ds-deps.sh` builds the things the image does not include, each pinned to a commit: SDL2 for 3DS (installed into `$DEVKITPRO/portlibs/3ds`), `bannertool` and `makerom`. It also fetches fpattern. Then `make -f Makefile.ctr` builds the game. Artifacts (kept 30 days): `out/fallout2-ce.3dsx`, `out/fallout2-ce.cia` and `out/SHA256SUMS`.
+- **`release`** (only on `v*` tags or `RELEASE_VERSION`): uploads the three files to the project's Generic Package Registry (`fallout2-ce-3ds/<version>`) and creates or updates the GitLab release for the tag, with links to them.
+
+To cut a release, bump the banner in `src/win32.cc`, add a `CHANGELOG.md` entry, then push the tag `vX.Y.Z`. To republish an existing tag, run a pipeline on that tag with `RELEASE_VERSION=vX.Y.Z`. To reproduce the CI build locally, run the same two steps from the repository root inside the image:
+
+```console
+$ docker run --rm -v "$PWD:/src/fallout2-ce-3ds" -w /src/fallout2-ce-3ds devkitpro/devkitarm:20251231 \
+    sh -c 'bash ci/build-3ds-deps.sh && make -f Makefile.ctr -j8'
+```
+
+The checkout directory must not be named `build`, because `Makefile.ctr` uses that name for its object directory.
+
 ## Configuration
 
 The main configuration file is `fallout2.cfg`. There are several important settings you might need to adjust for your installation. Depending on your Fallout distribution main game assets `master.dat`, `critter.dat`, `patch000.dat`, and `data` folder might be either all lowercased, or all uppercased. You can either update `master_dat`, `critter_dat`, `master_patches` and `critter_patches` settings to match your file names, or rename files to match entries in your `fallout2.cfg`.
