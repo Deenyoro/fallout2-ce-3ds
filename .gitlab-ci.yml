@@ -43,7 +43,7 @@ variables:
 version-check:
   extends: .linux
   stage: test
-  image: alpine:3.20
+  image: alpine:3.24
   script:
     - *version
     # A manual RELEASE_VERSION run must be started on that tag.
@@ -102,7 +102,7 @@ build-3ds:
 release:
   extends: .linux
   stage: release
-  image: alpine:3.20
+  image: alpine:3.24
   needs: [build-3ds]
   rules:
     - if: $CI_COMMIT_TAG =~ /^v/
