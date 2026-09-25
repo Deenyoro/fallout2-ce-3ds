@@ -3,6 +3,11 @@
 Nintendo 3DS port of Fallout 2 Community Edition. Releases are tagged `vX.Y.Z`;
 the version is also printed in the startup banner (`src/win32.cc`).
 
+## 0.0.47 — 2026-09-25
+
+- CI: pipelines run on merge requests (tests/Linux builds; Windows/macOS manual;
+  nothing published).
+
 ## 0.0.46 — 2026-09-24
 
 - CI/CD moved to GitLab (`.gitlab-ci.yml`), because GitHub Actions is now disabled. On `v*` tags and manual
